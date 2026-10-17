@@ -1,0 +1,39 @@
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.env
+
+# Ignore runtime SQLite files and user-generated uploads
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm
+
+# Runtime database and local uploads must not be committed or packaged as source.
+database/campusconnect.db
+database/campusconnect.db-shm
+database/campusconnect.db-wal
+database/uploads/*
+!database/uploads/.gitkeep
+
+# Local database backups can contain student data. Never commit them.
+database/backups/*
+!database/backups/.gitkeep
