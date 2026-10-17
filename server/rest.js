@@ -83,8 +83,7 @@ function selectRows(ctx, table, { filters, order, limit, offset }, extraWhere) {
   const params = [...polParams, ...w.params, ...(extraWhere ? extraWhere[1] : [])];
   let sql = `SELECT * FROM ${q(table)} WHERE ${where}`;
   if (order?.length) sql += ' ORDER BY ' + order.map((o) => `${col(info, o.col)} ${o.ascending === false ? 'DESC' : 'ASC'}`).join(', ');
-  if (Number.isInteger(limit)) sql += ` LIMIT ${Math.max(0, limit)}`;
-  if (Number.isInteger(offset) && offset > 0) sql += `${Number.isInteger(limit) ? '' : ' LIMIT -1'} OFFSET ${offset}`;
+  if (Number.isInteger(limit)) sql += ` LIMIT ${Math.min(Math.max(0, limit), 1000)}`;  if (Number.isInteger(offset) && offset > 0) sql += `${Number.isInteger(limit) ? '' : ' LIMIT -1'} OFFSET ${offset}`;
   return db.prepare(sql).all(...params).map((r) => redactRow(ctx, table, outRow(info, r)));
 }
 
@@ -121,6 +120,17 @@ function newId() {
 }
 
 export function run(ctx, req, broadcast) {
+  
+  // Reject malformed `values` early with a clear message instead of a confusing column/SQL error.
+  if (op === 'insert' || op === 'upsert' || op === 'update') {
+    const items = Array.isArray(req.values) ? req.values : [req.values];
+    if (op === 'update' && Array.isArray(req.values)) throw new HttpError('values must be an object');
+    for (const item of items) {
+      if (item === null || typeof item !== 'object' || Array.isArray(item)) {
+        throw new HttpError('values must be an object or a list of objects');
+      }
+    }
+  }
   const { table, op } = req;
   const info = tableInfo(table);
   const policy = policies[table];
