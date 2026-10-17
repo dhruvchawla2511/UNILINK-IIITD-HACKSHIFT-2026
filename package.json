@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "check": "node scripts/check.mjs",
     "backup": "node scripts/backup.mjs",
-    "smoke-test": "node scripts/smoke-test.mjs"
+    "smoke-test": "node scripts/smoke-test.mjs",
+    "test:college-email": "node scripts/college-email-test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.446.0",

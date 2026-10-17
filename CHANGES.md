@@ -1,5 +1,14 @@
 # UniLink update notes
 
+## College email verification (fixes and completion)
+- **Automatic college verification now works in the app that actually runs.** It was only implemented as a Supabase SQL migration, which the Node/SQLite server never used. The server now verifies a student when their **confirmed** email domain exactly matches the domain registered for exactly one college (`server/collegeEmail.js`).
+- **Email confirmation added** (`server/emailConfirm.js`, `server/mailer.js`). Sign-up and email changes send a one-time link (24 h); until it is opened the address is unconfirmed and cannot verify anyone. A reminder banner with "Resend email" shows meanwhile. Sending uses Resend over HTTPS (no new npm package); see `.env.example`.
+- **Pre-registration takeover closed.** Someone could sign up with a victim's address first, then the victim's Google login would land in an account the attacker could also open. Google sign-in now revokes the earlier password and sessions of an unconfirmed account it takes over.
+- **Google sign-in crashed for every new user** (`crypto.randomBytes` was used without importing `node:crypto` in `server/index.js`). Fixed. The server also now checks the token issuer.
+- Public mail providers (gmail.com ...) never verify, two colleges on one domain are treated as ambiguous, and people who are already verified are never changed.
+- **Supabase migration `20261017150000` corrected** (only matters if you really deploy on Supabase): the matcher function is no longer callable through the API (anyone could verify any account), `www.` stripping works, the first-user super-admin bootstrap is kept, and students can still choose a college (verification is dropped when they do, as on the Node server).
+- Run `npm run test:college-email` for an end-to-end check against a throwaway database. Existing SQLite databases are upgraded automatically; existing accounts start as unconfirmed.
+
 ## Latest UI and event updates
 - The AI assistant launcher is moved above the composer on Chat rooms and Messages so it no longer covers the send button. The assistant panel is shorter on those pages.
 - Profile access and the dark/light theme toggle are available in the top-right app bar on desktop and mobile.

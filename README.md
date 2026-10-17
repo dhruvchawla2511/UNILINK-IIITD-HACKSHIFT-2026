@@ -63,6 +63,7 @@ Use the switch to browse the selected audience. Users must select a college in t
 - **College officers** (committee head, secretary, vice president, president): only students who requested **their own college**, and never their own request. They approve or reject under **Profile > Verify students**. The server checks this in `server/verify.js`, not just the interface.
 - To limit this to higher ranks, change `VERIFY_MIN_RANK` in `server/policies.js` (and the same line in `src/lib/collegeRoles.ts`), for example to `COLLEGE_RANK.secretary`.
 - The first officer of a college has to be given their rank by a website admin (Admin Panel > Students).
+- **Automatic verification by college email:** a student whose *confirmed* email domain exactly matches the domain registered for exactly one college is verified without anyone approving them. Setup and rules: `COLLEGE_EMAIL_VERIFICATION_SETUP.md` (logic in `server/collegeEmail.js` and `server/emailConfirm.js`; test with `npm run test:college-email`).
 
 ## New-user guide
 
