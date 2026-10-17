@@ -84,6 +84,11 @@ try {
   assert(feed.data?.some((p) => p.id === post.data.id), 'Global post should be visible to another account');
 
   await request('/api/auth/user', { token: 'invalid-token', method: 'GET', expected: 401 });
+  
+  // REST endpoint input validation
+  await request('/api/rest', { token: alice.token, body: { table: 'messages', op: 'insert', values: 'oops' }, expected: 400 });
+  await request('/api/rest', { token: alice.token, body: { table: 'messages', op: 'insert', values: null }, expected: 400 });
+  await request('/api/rest', { token: alice.token, body: { table: 'messages', op: 'select', limit: 5000 } });
   console.log('UniLink smoke test passed: health, signup/session, message privacy, friend requests, notifications, direct messages, planner persistence, community feed, and auth rejection.');
 } catch (error) {
   console.error(error?.stack || error);
