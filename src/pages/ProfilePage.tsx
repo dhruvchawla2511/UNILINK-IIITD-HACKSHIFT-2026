@@ -14,6 +14,8 @@ import UserBadges from '@/components/UserBadges';
 import { rankLabel } from '@/lib/collegeRoles';
 import { AccountSecurity } from '@/components/AccountSecurity';
 import { SOCIAL_FIELDS, SocialLinks, type SocialKey } from '@/components/SocialLinks';
+import RecruiterProfilePanel from '@/components/RecruiterProfilePanel';
+import ProfileSkillsPanel from '@/components/ProfileSkillsPanel';
 
 export default function ProfilePage() {
   const { profile, refreshProfile } = useAuth();
@@ -161,7 +163,11 @@ export default function ProfilePage() {
   const roleLabel = profile.is_owner ? 'Owner'
     : profile.role === 'super_admin' ? 'Super Administrator'
     : profile.role === 'admin' ? 'Administrator'
+    : profile.portal_type === 'recruiter' ? 'Recruiter'
+    : profile.portal_type === 'founder' ? 'Founder'
+    : profile.portal_type === 'teacher' ? 'Teacher'
     : 'Student';
+  const isRecruiter = profile.portal_type === 'recruiter';
 
   const hasPending = verifications.some((v) => v.status === 'pending');
 
@@ -169,6 +175,8 @@ export default function ProfilePage() {
     <div className="h-full overflow-y-auto scrollbar-thin">
       <div className="max-w-2xl mx-auto p-6 lg:p-8">
         <h1 className="font-heading text-3xl font-semibold text-slate-900 dark:text-slate-100 mb-6">My Profile</h1>
+
+        {(profile.portal_type === 'recruiter' || profile.portal_type === 'teacher' || profile.portal_type === 'founder') ? <RecruiterProfilePanel portalType={profile.portal_type} /> : <ProfileSkillsPanel portalType={profile.portal_type} />}
 
         {/* Profile card */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 mb-6">
@@ -197,7 +205,7 @@ export default function ProfilePage() {
                     {rankLabel(profile)}
                   </span>
                 )}
-                {profile.is_verified ? (
+                {!isRecruiter && (profile.is_verified ? (
                   <span className="flex items-center gap-1 text-xs text-accent-600 dark:text-accent-400 font-medium">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Verified
                   </span>
@@ -205,7 +213,7 @@ export default function ProfilePage() {
                   <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-medium">
                     <Clock className="w-3.5 h-3.5" /> Unverified
                   </span>
-                )}
+                ))}
               </div>
             </div>
           </div>
@@ -225,7 +233,7 @@ export default function ProfilePage() {
           <SocialLinks person={profile} className="mb-4" />
 
           {/* Verification status */}
-          {profile.college && (
+          {!isRecruiter && profile.college && (
             <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-4 mb-4">
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <Building2 className="w-4 h-4 text-slate-400" />
@@ -235,7 +243,7 @@ export default function ProfilePage() {
           )}
 
           {/* Verification requests */}
-          <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
+          {!isRecruiter && <div className="border-t border-slate-100 dark:border-slate-800 pt-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">College Verification</h3>
               {!profile.is_verified && !hasPending && selectedCollege && (
@@ -279,13 +287,11 @@ export default function ProfilePage() {
                 ))}
               </div>
             )}
-          </div>
+          </div>}
         </div>
 
-        {/* College team (president / vice president only) */}
-        <CollegeVerifications viewer={profile} />
-        <CollegeTeam viewer={profile} />
-        <CollegeModerationLog viewer={profile} />
+        {/* College-specific tools are not part of the recruiter profile. */}
+        {!isRecruiter && <><CollegeVerifications viewer={profile} /><CollegeTeam viewer={profile} /><CollegeModerationLog viewer={profile} /></>}
 
         {/* Edit form */}
         <form onSubmit={handleSave} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
@@ -309,14 +315,14 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div>
+          {!isRecruiter && <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">College</label>
             <select value={selectedCollege} onChange={(e) => setSelectedCollege(e.target.value)}
               className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/30">
               <option value="">Select your college</option>
               {colleges.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-          </div>
+          </div>}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Bio (optional)</label>
@@ -344,7 +350,7 @@ export default function ProfilePage() {
 
           {extra.length > 0 && (
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-4 mb-3">Academic &amp; contact details</h4>
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-4 mb-3">{isRecruiter ? 'Professional & contact details' : 'Academic & contact details'}</h4>
               <div className="grid sm:grid-cols-2 gap-4">
                 {extra.map((f) => (
                   <div key={f.id} className={f.field_type === 'textarea' ? 'sm:col-span-2' : ''}>

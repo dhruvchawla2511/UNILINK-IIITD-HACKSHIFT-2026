@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { BookOpen, BriefcaseBusiness, MapPinned, CalendarCheck, UsersRound, Trophy, LifeBuoy, BarChart3, Plus, Trash2, Sparkles, Search, Clock3, CheckCircle2, Upload, Send, ShieldCheck, MapPin, FileText, WandSparkles } from 'lucide-react';
+import { BookOpen, BriefcaseBusiness, MapPinned, UsersRound, Trophy, LifeBuoy, BarChart3, Plus, Trash2, Sparkles, Search, Clock3, Send, ShieldCheck, MapPin, FileText, WandSparkles } from 'lucide-react';
 
 const field = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-400 focus:ring-2 focus:ring-brand-500/15 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 const card = 'rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900';

@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase, type EventItem, type EventVisibility, type College, type Profile } from '@/lib/supabase';
+import { supabase, apiPost, type EventItem, type EventVisibility, type College, type Profile } from '@/lib/supabase';
 import { isGlobalAdmin, officerLevel, COLLEGE_RANK } from '@/lib/collegeRoles';
 import {
   CalendarDays, MapPin, Plus, X, Loader2, Clock, User,
-  Building2, Search, Trash2, Tag, Lock
+  Building2, Search, Trash2, Tag, Lock, MessageCircle
 } from 'lucide-react';
 
 const CATEGORIES = ['general', 'tech', 'cultural', 'sports', 'career', 'workshop', 'social'];
 
-export default function EventsPage() {
+export default function EventsPage({ onOpenRoom }: { onOpenRoom?: (roomId: string) => void } = {}) {
   const { profile } = useAuth();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
@@ -17,6 +17,8 @@ export default function EventsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
+  const [joiningEventId, setJoiningEventId] = useState<string | null>(null);
+  const [eventActionError, setEventActionError] = useState('');
 
   const loadEvents = useCallback(async () => {
     const { data } = await supabase
@@ -34,6 +36,14 @@ export default function EventsPage() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  const joinEvent = async (event: EventItem) => {
+    setJoiningEventId(event.id); setEventActionError('');
+    const { data, error } = await apiPost<{ room_id: string }>('/api/features', { action: 'events.chat.join', event_id: event.id });
+    setJoiningEventId(null);
+    if (error || !data?.room_id) { setEventActionError(error?.message ?? 'Could not join this event chat.'); return; }
+    onOpenRoom?.(data.room_id);
+  };
 
   const deleteEvent = async (id: string) => {
     await supabase.from('events').delete().eq('id', id);
@@ -85,6 +95,8 @@ export default function EventsPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{filtered.length} {filtered.length === 1 ? 'event' : 'events'} to explore</p>
           </div>
         </div>
+
+        {eventActionError && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{eventActionError}</div>}
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -186,6 +198,15 @@ export default function EventsPage() {
                       </div>
                     </div>
 
+                    <button
+                      onClick={() => void joinEvent(event)}
+                      disabled={joiningEventId === event.id}
+                      className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                    >
+                      {joiningEventId === event.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+                      {joiningEventId === event.id ? 'Joining…' : 'Join Event'}
+                    </button>
+
                     {isOwn && (
                       <button
                         onClick={() => deleteEvent(event.id)}
@@ -256,7 +277,9 @@ function CreateEventModal({
     if (endDate && endDate < eventDate) return setError('The end date must be on or after the start date');
     setLoading(true);
     setError(null);
+    const eventId = crypto.randomUUID();
     const { error } = await supabase.from('events').insert({
+      id: eventId,
       title,
       description,
       event_date: eventDate,
@@ -268,6 +291,13 @@ function CreateEventModal({
       created_by: userId,
     });
     if (error) { setError(error.message); setLoading(false); return; }
+    const room = await apiPost<{ room_id: string }>('/api/features', { action: 'events.chat.create', event_id: eventId });
+    if (room.error || !room.data?.room_id) {
+      await supabase.from('events').delete().eq('id', eventId);
+      setError(room.error?.message ?? 'Could not create the event chat room. The event was not saved.');
+      setLoading(false);
+      return;
+    }
     onCreated();
   };
 

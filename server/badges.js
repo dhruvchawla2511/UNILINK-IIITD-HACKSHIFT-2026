@@ -15,7 +15,7 @@ import { HttpError } from './rest.js';
 import { COLLEGE_RANK } from './power.js';
 
 export const COLORS = ['slate', 'blue', 'emerald', 'amber', 'rose', 'violet', 'sky'];
-export const ICONS = ['badge-check', 'graduation-cap', 'star', 'book-open', 'shield', 'sparkles', 'crown', 'heart', 'flag', 'users'];
+export const ICONS = ['badge-check', 'graduation-cap', 'star', 'book-open', 'shield', 'sparkles', 'crown', 'heart', 'flag', 'users', 'briefcase-business', 'rocket'];
 export const GRANT_MIN_RANK = COLLEGE_RANK.secretary;
 export const MAX_PER_USER = 6;
 
@@ -24,6 +24,19 @@ const officerLevel = (u) => (u.college_id && u.is_verified ? COLLEGE_RANK[u.coll
 const clean = (v, max) => String(v ?? '').trim().slice(0, max);
 
 const outBadge = (b) => ({ ...b, officers_can_award: !!b.officers_can_award });
+
+// System role badges are derived from the server-side profile, never from a browser-supplied claim.
+// The role badge identifies the selected workspace; Verified Teacher additionally requires college
+// verification. Gmail/public-mail addresses never establish college affiliation (see collegeEmail.js).
+const SYSTEM_BADGES = [
+  { id: 'role-teacher', label: 'Teacher', color: 'sky', icon: 'graduation-cap', description: 'Teacher portal profile. The badge alone does not certify employment.', officers_can_award: false, sort_order: -4, system: true },
+  { id: 'verified-teacher', label: 'Verified Teacher', color: 'emerald', icon: 'badge-check', description: 'Teacher profile with verified college affiliation.', officers_can_award: false, sort_order: -3, system: true },
+  { id: 'role-recruiter', label: 'Recruiter', color: 'violet', icon: 'briefcase-business', description: 'Recruiter portal profile. Employer identity may require separate review.', officers_can_award: false, sort_order: -2, system: true },
+  { id: 'verified-recruiter', label: 'Verified Recruiter', color: 'emerald', icon: 'badge-check', description: 'Confirmed company email domain matched to the selected employer.', officers_can_award: false, sort_order: -1, system: true },
+  { id: 'role-founder', label: 'Founder', color: 'amber', icon: 'rocket', description: 'Founder portal profile. Startup claims may require separate review.', officers_can_award: false, sort_order: 0, system: true },
+  { id: 'verified-founder', label: 'Verified Founder', color: 'emerald', icon: 'badge-check', description: 'Company and founder claim approved by a UniLink administrator.', officers_can_award: false, sort_order: 1, system: true },
+];
+const SYSTEM_BADGE_IDS = new Set(SYSTEM_BADGES.map((b) => b.id));
 
 /** Why this viewer may NOT award/remove `badge` for `target` (null = allowed). */
 export function grantProblem(viewer, badge, target) {
@@ -41,6 +54,7 @@ const getTarget = (id) => {
   return t;
 };
 const getBadge = (id) => {
+  if (SYSTEM_BADGE_IDS.has(clean(id, 80))) throw new HttpError('System role badges cannot be manually changed', 400);
   const b = db.prepare('SELECT * FROM badges WHERE id = ?').get(clean(id, 80));
   if (!b) throw new HttpError('Badge not found', 404);
   return b;
@@ -48,7 +62,7 @@ const getBadge = (id) => {
 
 /** Every badge definition (everyone signed in sees them, since badges are public). */
 export function listBadges() {
-  return { data: db.prepare('SELECT * FROM badges ORDER BY sort_order, label COLLATE NOCASE').all().map(outBadge) };
+  return { data: [...SYSTEM_BADGES, ...db.prepare('SELECT * FROM badges ORDER BY sort_order, label COLLATE NOCASE').all().map(outBadge)] };
 }
 
 /** { user_ids: [...] } -> { users: { <id>: [badge ids, in display order] } }. Capped at 200 ids per call. */
@@ -61,6 +75,24 @@ export function lookupBadges(_user, body) {
         WHERE ub.user_id IN (${ids.map(() => '?').join(',')}) ORDER BY b.sort_order, b.label COLLATE NOCASE`
     ).all(...ids);
     for (const r of rows) users[r.user_id].push(r.badge_id);
+    const profiles = db.prepare(
+      `SELECT p.id, p.portal_type, p.is_verified, u.email_confirmed_at
+         FROM profiles p JOIN users u ON u.id = p.id
+        WHERE p.id IN (${ids.map(() => '?').join(',')})`
+    ).all(...ids);
+    for (const p of profiles) {
+      if (p.portal_type === 'teacher') {
+        users[p.id].push('role-teacher');
+        if (p.is_verified && p.email_confirmed_at) users[p.id].push('verified-teacher');
+      } else if (p.portal_type === 'recruiter') users[p.id].push('role-recruiter');
+      else if (p.portal_type === 'founder') users[p.id].push('role-founder');
+    }
+    // These badges are granted only from server-side company verification records.
+    const companyVerifications = db.prepare(`SELECT user_id,request_type FROM company_verification_requests WHERE status='approved' AND user_id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+    for (const v of companyVerifications) {
+      if (v.request_type === 'recruiter_domain' && !users[v.user_id].includes('verified-recruiter')) users[v.user_id].push('verified-recruiter');
+      if (v.request_type === 'founder_company' && !users[v.user_id].includes('verified-founder')) users[v.user_id].push('verified-founder');
+    }
   }
   return { data: { users } };
 }

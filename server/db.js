@@ -40,11 +40,19 @@ db.exec(`
 
 // ---- upgrade databases created before college ranks existed ----
 const hasColumn = (table, column) => db.prepare('SELECT 1 FROM pragma_table_info(?) WHERE name = ?').get(table, column) !== undefined;
+// Direct media attachments for community posts, marketplace photos, and event-owned chat rooms.
+if (!hasColumn('chat_rooms', 'event_id')) db.exec('ALTER TABLE chat_rooms ADD COLUMN event_id TEXT REFERENCES events(id) ON DELETE CASCADE');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_chat_rooms_event_id ON chat_rooms(event_id) WHERE event_id IS NOT NULL');
+// Upgrade databases created before email confirmation existed. Existing addresses stay unconfirmed
+// (we cannot know they were ever proven), so nobody is college-verified by email until they confirm.
+if (!hasColumn('users', 'email_confirmed_at')) db.exec('ALTER TABLE users ADD COLUMN email_confirmed_at TEXT');
 // Upgrade existing SQLite databases for multi-day campus events.
 if (!hasColumn('events', 'end_date')) {
   db.exec('ALTER TABLE events ADD COLUMN end_date TEXT');
   db.exec('UPDATE events SET end_date = event_date WHERE end_date IS NULL');
 }
+// Professional portal identity is separate from privileged admin permissions.
+if (!hasColumn('profiles', 'portal_type')) db.exec("ALTER TABLE profiles ADD COLUMN portal_type TEXT NOT NULL DEFAULT 'student' CHECK (portal_type IN ('student', 'teacher', 'recruiter', 'founder'))");
 if (!hasColumn('profiles', 'college_role')) {
   db.exec(`ALTER TABLE profiles ADD COLUMN college_role TEXT NOT NULL DEFAULT 'member' CHECK (college_role IN ('member', 'committee_head', 'secretary', 'vice_president', 'president'))`);
 }
@@ -76,10 +84,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS chat_message_reactions (message_id TEXT NOT 
 db.exec(fs.readFileSync(path.join(root, 'database', 'college_roles.sql'), 'utf8'));
 
 // ---- upgrade databases created before room codes existed ----
-// Every chat room has a 6-digit code (100000-999999) that people share to let others join it.
+// Every chat room has a cryptographically random 10-digit numeric code.
 export function newRoomCode() {
   for (let i = 0; i < 200; i++) {
-    const code = String(crypto.randomInt(100000, 1000000));
+    const code = String(crypto.randomInt(1_000_000_000, 10_000_000_000));
     if (!db.prepare('SELECT 1 FROM chat_rooms WHERE room_code = ?').get(code)) return code;
   }
   throw new Error('Could not find a free room code');
@@ -98,8 +106,11 @@ if (!hasColumn('room_members', 'last_seen_at')) db.exec('ALTER TABLE room_member
 // and dm_hidden keeps an empty conversation out of their list. The other person keeps their copy.
 if (!hasColumn('room_members', 'cleared_at')) db.exec('ALTER TABLE room_members ADD COLUMN cleared_at TEXT');
 if (!hasColumn('room_members', 'dm_hidden')) db.exec('ALTER TABLE room_members ADD COLUMN dm_hidden INTEGER NOT NULL DEFAULT 0');
-for (const { id } of db.prepare('SELECT id FROM chat_rooms WHERE room_code IS NULL AND dm_key IS NULL').all()) {
-  db.prepare('UPDATE chat_rooms SET room_code = ? WHERE id = ?').run(newRoomCode(), id);
+// Backfill missing codes and rotate legacy short codes to the new 10-digit format.
+for (const row of db.prepare('SELECT id, room_code FROM chat_rooms WHERE dm_key IS NULL').all()) {
+  if (!/^\d{10}$/.test(String(row.room_code ?? ''))) {
+    db.prepare('UPDATE chat_rooms SET room_code = ? WHERE id = ?').run(newRoomCode(), row.id);
+  }
 }
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS ux_chat_rooms_code ON chat_rooms(room_code)');
 
@@ -161,6 +172,31 @@ function addStarterColleges(version, list, toRow) {
 }
 addStarterColleges(2, STARTER_COLLEGES, indianRow);
 addStarterColleges(3, ELITE_FOREIGN_COLLEGES, foreignRow);
+
+// Multiple official email domains can differ from the college website domain. This curated seed is
+// based on institution-published contact/faculty addresses; Gmail and other public mail providers are never imported.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS college_email_domains (
+    college_id TEXT NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
+    domain TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'admin-confirmed',
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    PRIMARY KEY (college_id, domain)
+  );
+  CREATE INDEX IF NOT EXISTS idx_college_email_domains_domain ON college_email_domains(domain);
+`);
+{
+  const domainCsv = fs.readFileSync(path.join(root, 'database', 'seed', 'college-email-domains.csv'), 'utf8');
+  const domains = domainCsv.split(/\r?\n/).slice(1).filter((line) => line.trim()).map((line) => {
+    const [name, domain, source] = line.split(',').map((part) => part.trim());
+    return [name, domain, source];
+  }).filter(([name, domain, source]) => name && domain && source);
+  const addEmailDomain = db.prepare(`INSERT OR IGNORE INTO college_email_domains (college_id, domain, source)
+    SELECT id, ?, ? FROM colleges WHERE lower(name) = lower(?)`);
+  db.exec('BEGIN');
+  for (const [name, domain, source] of domains) addEmailDomain.run(domain, source, name);
+  db.exec('COMMIT');
+}
 
 // Starter colleges added by the first release have "Tier 1 · ..." in the description and no tier/country.
 // Move that into the new columns, but only for rows nobody has edited since.
@@ -286,6 +322,8 @@ if (!hasColumn('marketplace_listings', 'college_id')) {
   db.exec('ALTER TABLE marketplace_listings ADD COLUMN college_id TEXT REFERENCES colleges(id) ON DELETE SET NULL');
   db.exec('UPDATE marketplace_listings SET college_id=(SELECT college_id FROM profiles WHERE profiles.id=marketplace_listings.seller_id) WHERE college_id IS NULL');
 }
+if (!hasColumn('community_posts', 'media_urls')) db.exec("ALTER TABLE community_posts ADD COLUMN media_urls TEXT NOT NULL DEFAULT '[]'");
+if (!hasColumn('marketplace_listings', 'photo_urls')) db.exec("ALTER TABLE marketplace_listings ADD COLUMN photo_urls TEXT NOT NULL DEFAULT '[]'");
 
 // ---- profile badges (see server/badges.js) ----
 db.exec(`

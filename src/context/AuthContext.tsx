@@ -6,8 +6,9 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, fullName: string, portalType?: 'student' | 'teacher' | 'recruiter' | 'founder') => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: (credential: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -87,14 +88,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [userId, waitingForVerification, loadProfile]);
 
   const refreshProfile = useCallback(async () => {
-    if (user) await loadProfile(user.id);
-  }, [user, loadProfile]);
+    if (!userId) return;
+    // Also re-read the user: confirming an email address (possibly on another device) changes user.email_confirmed.
+    const { data } = await supabase.auth.getSession();
+    const fresh = data.session?.user;
+    if (fresh && fresh.id === userId) {
+      setUser((prev) => (prev && prev.email === fresh.email && prev.email_confirmed === fresh.email_confirmed ? prev : fresh));
+    }
+    await loadProfile(userId);
+  }, [userId, loadProfile]);
 
-  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, portalType: 'student' | 'teacher' | 'recruiter' | 'founder' = 'student') => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } },
+      options: { data: { full_name: fullName, portal_type: portalType } },
     });
     if (error) return { error: error.message };
     if (data.user) {
@@ -109,6 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   }, []);
 
+  const signInWithGoogle = useCallback(async (credential: string) => {
+    const { error } = await supabase.auth.signInWithGoogle(credential);
+    return { error: error?.message ?? null };
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -117,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, signUp, signIn, signInWithGoogle, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

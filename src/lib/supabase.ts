@@ -5,6 +5,8 @@
 export interface User {
   id: string;
   email: string;
+  /** false until the owner of the address opens the emailed confirmation link (or signs in with Google). */
+  email_confirmed?: boolean;
 }
 export interface Session {
   access_token: string;
@@ -230,11 +232,14 @@ const auth = {
     authListeners.add(cb);
     return { data: { subscription: { unsubscribe: () => authListeners.delete(cb) } } };
   },
-  signUp(args: { email: string; password: string; options?: { data?: { full_name?: string } } }) {
-    return authRequest('/api/auth/signup', { email: args.email, password: args.password, full_name: args.options?.data?.full_name });
+  signUp(args: { email: string; password: string; options?: { data?: { full_name?: string; portal_type?: 'student' | 'teacher' | 'recruiter' | 'founder' } } }) {
+    return authRequest('/api/auth/signup', { email: args.email, password: args.password, full_name: args.options?.data?.full_name, portal_type: args.options?.data?.portal_type });
   },
   signInWithPassword(args: { email: string; password: string }) {
     return authRequest('/api/auth/signin', args);
+  },
+  signInWithGoogle(credential: string) {
+    return authRequest('/api/auth/google', { credential });
   },
   async signOut() {
     await call('/api/auth/signout', {});
@@ -340,6 +345,7 @@ export interface Profile {
   email: string;
   full_name: string;
   role: Role;
+  portal_type?: 'student' | 'teacher' | 'recruiter' | 'founder';
   /** The single website owner (also a super admin). Sees every room. */
   is_owner?: boolean;
   college_id: string | null;
@@ -362,7 +368,7 @@ export interface ChatRoom {
   name: string;
   description: string | null;
   room_type: RoomType;
-  /** 6-digit code people use to join the room */
+  /** 10-digit code people use to join the room */
   room_code: string;
   college_id: string | null;
   created_by: string;

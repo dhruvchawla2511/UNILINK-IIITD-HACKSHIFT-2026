@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Check, Copy, KeyRound, Loader2, RefreshCw, X } from 'lucide-react';
 import { apiPost, type ChatRoom } from '@/lib/supabase';
 
-/** "482 913": easier to read out loud or type than six digits in a row. */
-export const formatCode = (code: string) => (code.length === 6 ? `${code.slice(0, 3)} ${code.slice(3)}` : code);
+/** Format a 10-digit room code for display. */
+export const formatCode = (code: string) => (code.length === 10 ? `${code.slice(0, 5)} ${code.slice(5)}` : code);
 
 /** Who can see a room, in a few words. */
 export function roomScope(room: Pick<ChatRoom, 'room_type' | 'college'>): string {
@@ -12,7 +12,7 @@ export function roomScope(room: Pick<ChatRoom, 'room_type' | 'college'>): string
   return 'Private: invite code only';
 }
 
-/** The room's 6-digit code with a copy button, and (for people who manage the room) a button to make a new one. */
+/** The room's 10-digit code with a copy button, and (for people who manage the room) a button to make a new one. */
 export function RoomCodeChip({ room, canRegenerate, onRegenerated }: { room: ChatRoom; canRegenerate: boolean; onRegenerated: (code: string) => void }) {
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +67,7 @@ export function RoomCodeChip({ room, canRegenerate, onRegenerated }: { room: Cha
   );
 }
 
-/** Type a 6-digit code to join a room somebody shared with you. */
+/** Type a 10-digit code to join a room somebody shared with you. */
 export function JoinByCodeModal({ onClose, onJoined }: { onClose: () => void; onJoined: (room: ChatRoom) => void }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,7 +75,7 @@ export function JoinByCodeModal({ onClose, onJoined }: { onClose: () => void; on
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.length !== 6) return setError('Enter the 6-digit room code');
+    if (code.length !== 10) return setError('Enter the 10-digit room code');
     setLoading(true);
     setError(null);
     const { data, error } = await apiPost<ChatRoom>('/api/chat/room/join', { code });
@@ -94,25 +94,25 @@ export function JoinByCodeModal({ onClose, onJoined }: { onClose: () => void; on
           </button>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          Every room has a 6-digit code. Ask a member to share it. College rooms only open for verified students of that college.
+          Every room has a 10-digit code. Ask a member to share it. College rooms only open for verified students of that college.
         </p>
         <form onSubmit={submit} className="space-y-4">
           <input
             autoFocus
             inputMode="numeric"
             autoComplete="off"
-            maxLength={7}
+            maxLength={10}
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            className="w-full px-3 py-3 text-center text-2xl font-mono font-semibold tracking-[0.4em] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+            placeholder="0000000000"
+            className="w-full px-3 py-3 text-center text-2xl font-mono font-semibold tracking-[0.2em] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30"
           />
           {error && (
             <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl px-3 py-2">{error}</div>
           )}
           <button
             type="submit"
-            disabled={loading || code.length !== 6}
+            disabled={loading || code.length !== 10}
             className="w-full flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-colors"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join room'}

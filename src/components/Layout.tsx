@@ -15,7 +15,7 @@ import { useDirectMessages } from '@/context/DirectMessageContext';
 import { dmApi, type DmPerson } from '@/lib/directMessages';
 import Chatbot from '@/components/Chatbot';
 
-export type Page = 'home' | 'chat' | 'messages' | 'colleges' | 'events' | 'gallery' | 'admin' | 'profile' | 'community' | 'hub' | 'planner' | 'collaborate' | 'growth' | 'campusplus' | 'studydesk' | 'personalized' | 'careercoach' | 'navigator' | 'tutoring' | 'projecthub' | 'helpdesk' | 'analytics';
+export type Page = 'home' | 'chat' | 'messages' | 'colleges' | 'events' | 'gallery' | 'admin' | 'profile' | 'community' | 'hub' | 'planner' | 'collaborate' | 'growth' | 'campusplus' | 'studydesk' | 'personalized' | 'careercoach' | 'navigator' | 'tutoring' | 'projecthub' | 'helpdesk' | 'analytics' | 'professional' | 'classrooms' | 'networkextras';
 
 interface NavItem {
   id: Page;
@@ -27,13 +27,15 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: Home },
   { id: 'community', label: 'Community', icon: Users },
+  { id: 'networkextras', label: 'Mentorship & Knowledge', icon: BookOpen },
   { id: 'hub', label: 'Campus Hub', icon: Sparkles },
   { id: 'chat', label: 'Chat rooms', icon: MessageSquare },
+  { id: 'classrooms', label: 'Classes', icon: GraduationCap },
   { id: 'messages', label: 'Messages', icon: MessageCircle },
   { id: 'colleges', label: 'Colleges', icon: Building2 },
   { id: 'events', label: 'Events', icon: CalendarDays },
   { id: 'planner', label: 'Student planner', icon: CalendarDays },
-  { id: 'collaborate', label: 'Collaborate', icon: Users },
+  { id: 'collaborate', label: 'Alumni Network', icon: Users },
   { id: 'growth', label: 'Growth & portfolio', icon: Compass },
   { id: 'campusplus', label: 'Campus Plus', icon: GraduationCap },
   { id: 'personalized', label: 'My Dashboard', icon: Sparkles },
@@ -63,7 +65,7 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<DmPerson[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(['personalized', 'studydesk', 'careercoach', 'navigator', 'tutoring', 'projecthub', 'helpdesk', 'analytics'].includes(currentPage));
+  const [toolsOpen, setToolsOpen] = useState(['personalized', 'studydesk', 'careercoach', 'navigator', 'tutoring', 'projecthub', 'helpdesk', 'analytics', 'networkextras'].includes(currentPage));
   const { unread, openDirectMessage } = useDirectMessages();
 
   const visibleNavItems = navItems.filter(
@@ -107,6 +109,7 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
         setSearchQuery('');
       } else if (event.key === 'Escape') {
         setSearchOpen(false);
+        setSidebarOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -119,6 +122,10 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
     setSearchOpen(false);
     setSearchQuery('');
   };
+
+  // Chat rooms and direct messages behave like a chat app: the page itself never scrolls,
+  // only the message list does. The header, conversation bar and send box stay in place.
+  const isChatLike = currentPage === 'chat' || currentPage === 'messages';
 
   const roleLabel = profile?.is_owner ? 'Owner'
     : profile?.role === 'super_admin' ? 'Super Admin'
@@ -134,7 +141,7 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
 
   return (
-    <div className={`app-shell flex ${currentPage === 'chat' ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
+    <div className={`app-shell flex ${isChatLike ? 'h-dvh overflow-hidden' : 'min-h-screen'}`}>
       <a href="#main-content" className="skip-link">Skip to main content</a>
 
       {/* Mobile overlay */}
@@ -151,12 +158,20 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
       }`}>
         {/* Logo */}
         <div className="h-[76px] flex items-center gap-3 px-5 border-b border-slate-200/80 dark:border-slate-800/80">
-          <div className="brand-mark"><img src="/logo.png" alt="Unilink logo" className="w-9 h-9 object-contain" /></div>
-          <div>
-            <h1 className="font-heading font-bold text-slate-900 dark:text-slate-100 text-[15px] leading-tight tracking-tight">UniLink</h1>
-            <p className="text-[10px] text-slate-400 mt-1">YOUR CAMPUS, CONNECTED</p>
-          </div>
-          <button onClick={() => setSidebarOpen(false)} className="ml-auto lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+          <button
+            type="button"
+            onClick={() => goToPage('home')}
+            aria-label="Go to UniLink home page"
+            title="Go to Home"
+            className="flex min-w-0 items-center gap-3 rounded-lg text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <span className="brand-mark"><img src="/logo.png" alt="" className="w-9 h-9 object-contain" /></span>
+            <span>
+              <span className="block font-heading font-bold text-slate-900 dark:text-slate-100 text-[15px] leading-tight tracking-tight">UniLink</span>
+              <span className="mt-1 block text-[10px] text-slate-400">YOUR CAMPUS, CONNECTED</span>
+            </span>
+          </button>
+          <button type="button" onClick={() => setSidebarOpen(false)} aria-label="Close navigation" className="ml-auto lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -244,9 +259,9 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${isChatLike ? 'min-h-0 overflow-hidden' : ''}`}>
         {/* Responsive app header */}
-        <header className="app-topbar sticky top-0 z-20 flex h-[70px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <header className="app-topbar sticky top-0 z-20 flex h-[70px] shrink-0 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <button onClick={() => setSidebarOpen(true)} className="icon-button flex lg:hidden" aria-label="Open navigation">
             <Menu className="w-5 h-5" />
           </button>
@@ -266,7 +281,7 @@ export default function Layout({ children, currentPage, onPageChange }: LayoutPr
           </button>
         </header>
 
-        <main id="main-content" tabIndex={-1} className={`app-main flex-1 min-h-0 min-w-0 overflow-hidden focus:outline-none ${currentPage === 'chat' ? 'h-[calc(100dvh-58px)] sm:h-[calc(100dvh-70px)]' : ''}`}>{children}</main>
+        <main id="main-content" tabIndex={-1} className={`app-main flex-1 min-h-0 min-w-0 overflow-hidden focus:outline-none ${isChatLike ? 'chat-locked-main' : ''}`}>{children}</main>
         <nav className="mobile-bottom-nav" aria-label="Quick navigation">
           {([
             { id: 'home' as Page, label: 'Home', icon: Home },

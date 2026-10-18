@@ -13,6 +13,7 @@ import ModerationLog from '@/components/admin/ModerationLog';
 import UserBadges from '@/components/UserBadges';
 import BadgesManager from '@/components/admin/BadgesManager';
 import RankEditor from '@/components/RankEditor';
+import { CompanyVerificationAdminPanel } from '@/components/CompanyVerificationPanel';
 import CollegeFormModal from '@/components/CollegeFormModal';
 import CollegeLogo from '@/components/CollegeLogo';
 import CollegeRequestsPanel from '@/components/admin/CollegeRequestsPanel';
@@ -20,7 +21,7 @@ import CollegeImportModal from '@/components/admin/CollegeImportModal';
 import TierBadge, { placeLine } from '@/components/TierBadge';
 import { rankLabel } from '@/lib/collegeRoles';
 
-type Tab = 'dashboard' | 'verifications' | 'students' | 'colleges' | 'requests' | 'rooms' | 'home' | 'fields' | 'commands' | 'modlog' | 'badges';
+type Tab = 'dashboard' | 'verifications' | 'students' | 'colleges' | 'requests' | 'rooms' | 'home' | 'fields' | 'commands' | 'modlog' | 'badges' | 'company-requests';
 
 export default function AdminPage() {
   const { profile } = useAuth();
@@ -121,6 +122,7 @@ export default function AdminPage() {
     { id: 'rooms', label: 'Chat Rooms', icon: MessageSquare, count: rooms.length },
     { id: 'modlog', label: 'Moderation log', icon: ScrollText },
     { id: 'badges', label: 'Badges', icon: Award },
+    { id: 'company-requests', label: 'Company requests', icon: Building2 },
     ...(isSuperAdmin ? [{ id: 'home' as Tab, label: 'Home Page', icon: LayoutDashboard }, { id: 'fields' as Tab, label: 'Profile Fields', icon: ListPlus }, { id: 'commands' as Tab, label: 'Chat commands', icon: SlidersHorizontal }] : []),
   ];
 
@@ -171,6 +173,7 @@ export default function AdminPage() {
         {/* Content */}
         {tab === 'dashboard' && <Dashboard onOpenTab={setTab} />}
         {tab === 'badges' && <BadgesManager />}
+        {tab === 'company-requests' && <CompanyVerificationAdminPanel />}
         {tab === 'home' && isSuperAdmin && profile && <HomeManager userId={profile.id} />}
         {tab === 'fields' && isSuperAdmin && <ProfileFieldsManager />}
         {tab === 'commands' && isSuperAdmin && <CommandPermissions />}

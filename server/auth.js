@@ -30,12 +30,12 @@ export function destroySession(token) {
   db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
 }
 
-/** Returns { id, email, role, college_id, is_verified, college_role } for a valid token, else null. */
+/** Returns { id, email, email_confirmed, role, college_id, is_verified, college_role } for a valid token, else null. */
 export function userFromToken(token) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT u.id, u.email, p.role, p.college_id, p.is_verified, p.college_role, p.is_owner
+      `SELECT u.id, u.email, u.email_confirmed_at, p.role, p.college_id, p.is_verified, p.college_role, p.is_owner
          FROM sessions s
          JOIN users u ON u.id = s.user_id
          LEFT JOIN profiles p ON p.id = u.id
@@ -43,7 +43,7 @@ export function userFromToken(token) {
     )
     .get(sha256(token), new Date().toISOString());
   return row
-    ? { id: row.id, email: row.email, role: row.role ?? 'student', college_id: row.college_id ?? null, is_verified: !!row.is_verified, college_role: row.college_role ?? 'member', is_owner: !!row.is_owner }
+    ? { id: row.id, email: row.email, email_confirmed: !!row.email_confirmed_at, role: row.role ?? 'student', college_id: row.college_id ?? null, is_verified: !!row.is_verified, college_role: row.college_role ?? 'member', is_owner: !!row.is_owner }
     : null;
 }
 
@@ -53,5 +53,5 @@ export function bearer(req) {
 }
 
 export function publicUser(u) {
-  return { id: u.id, email: u.email };
+  return { id: u.id, email: u.email, email_confirmed: !!u.email_confirmed };
 }

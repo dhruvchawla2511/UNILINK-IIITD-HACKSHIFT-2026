@@ -17,7 +17,7 @@ Use the switch to browse the selected audience. Users must select a college in t
 
 - **Home page (main page):** hero slideshow, upcoming events, images and videos. Everything on it is controlled by the super admin (see below).
 - **Auth:** sign up and sign in. The first account created becomes `super_admin`.
-- **Chat:** global, college and private rooms with realtime messages, plus photos, videos, audio, files and polls. College chats are only for verified students of that college, and every room has a 6-digit code to share (see below).
+- **Chat:** global, college and private rooms with realtime messages, plus photos, videos, audio, files and polls. College chats are only for verified students of that college, and every room has a 10-digit code to share (see below).
 - **Direct messages:** private 1-on-1 chats between any two people (students, alumni, admins) on the **Messages** page. Start one from "New message" (search by name, or pick an admin) or from the **Message** button on anyone's profile card. Photos and files work like in rooms, the menu shows an unread badge, and either person can block the other or report a message. Only the two people can read a conversation (not even website admins; a reported message reaches the admins). There are no commands, owners or room codes in a direct message. Under the hood it is a private room with `chat_rooms.dm_key` set (`server/dm.js`, `server/dmGuards.js`).
 - **Profile badges:** custom badges (starters: Verified Alumni, Club Lead, TA) shown next to a person's name in chat, community posts and comments, direct messages, private-room member lists, profile cards and the admin student list. They update live when awarded, removed or edited. Admins create and edit badges and award them in **Admin Panel > Badges** (colour, icon, description). A badge marked "officers can award" can also be given by a verified college secretary, vice president or president, only to verified members of their own college (from the person's info card in chat). A person can hold up to 6. Rules are enforced in `server/badges.js`; the shared display is `src/components/UserBadges.tsx` and `src/lib/badges.ts`.
 - **Profile completeness:** the profile page shows a progress bar and checklist (photo, bio, college, verified, a link) and collapses to "complete" at 100%. Logic: `src/components/ProfileCompleteness.tsx`.
@@ -35,7 +35,7 @@ Use the switch to browse the selected audience. Users must select a college in t
 ## Built-in rooms: General and college Lobbies
 
 - **General:** a global room created automatically at the first sign-up. Everyone who is signed in can see and post in it, and it opens by itself on a new person's first visit to Chat (on desktop). If a super admin deletes it, it does not come back.
-- **College Lobby:** every college gets a room called "<College> Lobby" the first time anyone chooses (or is verified for) that college. **Choosing your college on your profile is enough** to see and post in it; verification is not needed. Change your college and the old Lobby closes and the new one opens. Lobbies appear in the college list of rooms and have a 6-digit code like any room.
+- **College Lobby:** every college gets a room called "<College> Lobby" the first time anyone chooses (or is verified for) that college. **Choosing your college on your profile is enough** to see and post in it; verification is not needed. Change your college and the old Lobby closes and the new one opens. Lobbies appear in the college list of rooms and have a 10-digit code like any room.
 - **Verified-only college rooms are unchanged:** rooms made by officers or admins for a college still need verification. The Lobby is the open entry room; those are the private ones.
 - Existing installs: on the next start General is added (unless a global room already exists) and a Lobby is created for each college that already has students. Code: `server/defaultRooms.js`; rooms are marked with `chat_rooms.system_key` (`general` or `lobby`).
 
@@ -47,7 +47,7 @@ Use the switch to browse the selected audience. Users must select a college in t
 | **College** | Only **verified** students of that college (website admins can also see them, to moderate) | Only verified students of that college |
 | **Private** | Only people who joined with the code (the creator is a member automatically) | Anyone who has the code |
 
-- **Room codes:** every room (global, college and private) gets a random **6-digit code**, shown in the chat header with a copy button. Share it so others can join: click the **key** button above the room list, type the code, done. A private room only becomes visible to a person once they join with its code.
+- **Room codes:** every room (global, college and private) gets a random **10-digit code**, shown in the chat header with a copy button. Share it so others can join: click the **key** button above the room list, type the code, done. A private room only becomes visible to a person once they join with its code.
 - **New code:** the room's creator (and, for college rooms, a secretary and above; and website admins) can press the refresh button next to the code. The old code stops working; people already in the room stay in.
 - **Guessing is limited:** after 10 wrong codes in 10 minutes a person has to wait. A college code typed by someone outside that college gives the same "no room found" answer as a wrong code, so codes can't be used to discover rooms.
 - **Choosing a college is not enough.** A student must be **verified** for that college. If a verified student switches their college on their profile, the verified flag is removed until the new college verifies them, and the old college's chats close immediately (including live messages).
@@ -400,3 +400,16 @@ The built-in helper includes guided answers for app navigation, college/global v
 - **Production hosting must provide a persistent writable disk.** The app stores users, chat, uploads, and campus content in SQLite; ephemeral storage loses data on restart.
 
 See [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) for deployment requirements, verification commands, backup guidance, and known boundaries.
+
+## Recruiter and founder company verification
+- The server seeds a curated directory of major companies and their exact corporate email domains into SQLite at startup.
+- Recruiters use Professional portal → Company verification, select their employer, and must have a confirmed UniLink email address matching one of that company's listed domains. Matching is exact; Gmail and other public email domains do not qualify.
+- Founders use Professional portal → Company verification to submit a startup name, company domain, website, and optional supporting notes. The request remains pending until an administrator approves it in Admin Panel → Company requests.
+- `Verified Recruiter` and `Verified Founder` badges are derived from approved server-side records, not from a browser-selected role alone.
+- Company domain data is curated seed data. Review and maintain the domain allowlist before production use; email-domain control verifies access to a company mailbox, not a person's hiring authority or employment status.
+
+
+## Secure join codes
+- Teacher-created classes use an eight-word random phrase as the class join code. Students can enter the words separated by spaces or hyphens.
+- Chat rooms use random 10-digit numeric codes.
+- Legacy codes are rotated to the new formats when the server starts, so teachers and room members should share the newly displayed code after upgrading.

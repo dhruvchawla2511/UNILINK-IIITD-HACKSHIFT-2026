@@ -95,9 +95,21 @@ export async function saveUpload(req, user) {
 function mayRead(user, row) {
   if (row.user_id === user.id) return true;
   if (db.prepare('SELECT 1 FROM campus_shared_uploads WHERE upload_id = ?').get(row.id)) return true;
+  // Community and marketplace media follows the visibility of the post/listing that references it.
+  const mediaUrl = `/api/files/${row.id}`;
+  const me = db.prepare('SELECT id,college_id,role FROM profiles WHERE id=?').get(user.id);
+  const admin = ['admin', 'super_admin'].includes(user.role || me?.role);
+  for (const post of db.prepare('SELECT author_id,college_id,media_urls FROM community_posts WHERE media_urls LIKE ?').all(`%${mediaUrl}%`)) {
+    let urls = []; try { urls = JSON.parse(post.media_urls || '[]'); } catch { /* ignore malformed legacy data */ }
+    if (urls.includes(mediaUrl) && (admin || post.author_id === user.id || !post.college_id || post.college_id === me?.college_id)) return true;
+  }
+  for (const listing of db.prepare('SELECT seller_id,college_id,photo_urls FROM marketplace_listings WHERE photo_urls LIKE ?').all(`%${mediaUrl}%`)) {
+    let urls = []; try { urls = JSON.parse(listing.photo_urls || '[]'); } catch { /* ignore malformed legacy data */ }
+    if (urls.includes(mediaUrl) && (admin || listing.seller_id === user.id || !listing.college_id || listing.college_id === me?.college_id)) return true;
+  }
   // Team files are visible only to the project owner and accepted members.
   if (db.prepare(`SELECT 1 FROM collaboration_files f JOIN collaboration_projects p ON p.id=f.project_id LEFT JOIN collaboration_members m ON m.project_id=p.id AND m.user_id=? AND m.status='accepted' WHERE f.upload_id=? AND (p.owner_id=? OR m.user_id=?)`).get(user.id, row.id, user.id, user.id)) return true;
-  const msg = db.prepare('SELECT room_id FROM messages WHERE attachment_url = ?').get(`/api/files/${row.id}`);
+  const msg = db.prepare('SELECT room_id FROM messages WHERE attachment_url = ?').get(mediaUrl);
   if (!msg) return false;
   const [sql, params] = visibleRoomSql({ user });
   return !!db.prepare(`SELECT 1 FROM chat_rooms WHERE id = ? AND ${sql}`).get(msg.room_id, ...params);
@@ -154,7 +166,12 @@ export const removeUploadByUrl = (url) => removeUpload(fileIdFromUrl(url));
 export function sweepUploads() {
   const cutoff = new Date(Date.now() - 86400_000).toISOString();
   for (const { id } of db.prepare('SELECT id FROM uploads WHERE created_at < ?').all(cutoff)) {
-    if (!db.prepare('SELECT 1 FROM messages WHERE attachment_url = ?').get(`/api/files/${id}`) && !db.prepare('SELECT 1 FROM campus_shared_uploads WHERE upload_id = ?').get(id)) removeUpload(id);
+    const url = `/api/files/${id}`;
+    const referenced = db.prepare('SELECT 1 FROM messages WHERE attachment_url = ?').get(url)
+      || db.prepare('SELECT 1 FROM campus_shared_uploads WHERE upload_id = ?').get(id)
+      || db.prepare('SELECT 1 FROM community_posts WHERE media_urls LIKE ?').get(`%${url}%`)
+      || db.prepare('SELECT 1 FROM marketplace_listings WHERE photo_urls LIKE ?').get(`%${url}%`);
+    if (!referenced) removeUpload(id);
   }
   for (const f of fs.readdirSync(UPLOAD_DIR)) {
     const full = path.join(UPLOAD_DIR, f);

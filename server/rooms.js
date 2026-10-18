@@ -1,9 +1,9 @@
-// Room codes. Every chat room has a 6-digit code that can be shared to bring people into it.
+// Room codes. Every chat room has a 10-digit numeric code that can be shared to bring people into it.
 //   global  room : anyone signed in can join with the code (they can see it anyway)
 //   college room : only verified students of that college (website admins too, and joining adds it to their list)
 //   private room : anyone with the code joins and becomes a member
 // A person who is not allowed in gets the same "no room" answer as for a wrong code, so codes cannot be
-// used to find out which rooms exist. Wrong guesses are limited, because there are only 900,000 codes.
+// used to find out which rooms exist. Wrong guesses are rate-limited to protect the larger numeric code space.
 import { db, newRoomCode } from './db.js';
 import { HttpError } from './rest.js';
 import { policies, isAdminUser, visibleRoomSql } from './policies.js';
@@ -33,7 +33,7 @@ const NOT_FOUND = 'No room found with that code. College rooms can only be joine
 export function joinByCode(user, body) {
   checkNotLocked(user.id);
   const code = String(body.code ?? '').replace(/[\s-]/g, '');
-  if (!/^\d{6}$/.test(code)) throw new HttpError('Enter the 6-digit room code');
+  if (!/^\d{10}$/.test(code)) throw new HttpError('Enter the 10-digit room code');
 
   const room = db.prepare('SELECT * FROM chat_rooms WHERE room_code = ?').get(code);
   const allowed =

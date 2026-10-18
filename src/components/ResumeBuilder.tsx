@@ -81,7 +81,7 @@ export default function ResumeBuilder() {
           {(template !== 'modern' || form.links) && <p className={`mt-3 break-words text-xs ${creative ? 'text-white/90' : 'text-slate-500'}`}>{[...(template === 'modern' ? [form.links] : [form.email,form.phone,form.location,form.links])].filter(Boolean).join('  •  ')}</p>}
         </div>
         <div className={template === 'modern' ? 'grid gap-x-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]' : ''}>
-          {sections.filter(([,value])=>value.trim()).map(([heading,value], index)=><section className={`mt-6 break-inside-avoid ${template === 'modern' && (heading === 'SKILLS' || heading === 'CERTIFICATIONS' || heading === 'LANGUAGES' || heading === 'INTERESTS') ? 'sm:col-span-1' : template === 'modern' ? 'sm:col-span-2' : ''}`} key={heading}>
+          {sections.filter(([,value])=>value.trim()).map(([heading,value])=><section className={`mt-6 break-inside-avoid ${template === 'modern' && (heading === 'SKILLS' || heading === 'CERTIFICATIONS' || heading === 'LANGUAGES' || heading === 'INTERESTS') ? 'sm:col-span-1' : template === 'modern' ? 'sm:col-span-2' : ''}`} key={heading}>
             <h2 className={`pb-1 text-xs font-bold tracking-[.18em] ${creative ? 'text-slate-900' : ''} ${minimal ? 'border-0' : 'border-b'}`} style={{ color: creative ? '#334155' : accent, borderColor: creative ? '#cbd5e1' : `${accent}55` }}>{heading}</h2>
             <p className={`mt-2 whitespace-pre-wrap break-words text-sm leading-6 ${creative ? 'text-slate-700' : 'text-slate-700'}`}>{heading==='SKILLS'?value.split(/[,;]+/).map(s=>s.trim()).filter(Boolean).join('  •  '):value}</p>
           </section>)}
