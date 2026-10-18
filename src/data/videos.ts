@@ -1,0 +1,40 @@
+import type { MediaItem } from './images';
+
+export const videos: MediaItem[] = [
+  {
+    id: 'vid-1',
+    type: 'video',
+    title: 'Aerial Coastline',
+    description: 'Aerial drone footage of a stunning coastline with crystal clear waters.',
+    url: 'https://cdn.coverr.co/videos/coverr-aerial-view-of-the-coast-2633/1080p.mp4',
+    thumbnailUrl: 'https://images.pexels.com/photos/34448034/pexels-photo-34448034.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    category: 'Aerial',
+    author: 'Coverr',
+    width: 1920,
+    height: 1080,
+  },
+  {
+    id: 'vid-2',
+    type: 'video',
+    title: 'Mountain Peak Clouds',
+    description: 'Stunning view of a cloudy mountain peak captured in dramatic lighting.',
+    url: 'https://cdn.coverr.co/videos/coverr-clouds-over-a-mountain-1573/1080p.mp4',
+    thumbnailUrl: 'https://images.pexels.com/photos/11847657/pexels-photo-11847657.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    category: 'Nature',
+    author: 'Coverr',
+    width: 1920,
+    height: 1080,
+  },
+  {
+    id: 'vid-3',
+    type: 'video',
+    title: 'Alpine Landscapes',
+    description: 'Majestic alpine mountains with snow peaks under a clear blue sky.',
+    url: 'https://cdn.coverr.co/videos/coverr-a-mountain-with-snow-on-top-2631/1080p.mp4',
+    thumbnailUrl: 'https://images.pexels.com/photos/34448034/pexels-photo-34448034.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
+    category: 'Nature',
+    author: 'Coverr',
+    width: 1920,
+    height: 1080,
+  },
+];
