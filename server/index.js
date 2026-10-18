@@ -3,6 +3,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { db, DB_PATH } from './db.js';
 import { bearer, createSession, destroySession, hashPassword, publicUser, userFromToken, verifyPassword } from './auth.js';
@@ -14,6 +15,9 @@ import { getProfileFields, saveProfileFields } from './profileFields.js';
 import { createPoll, votePoll, setPollClosed, listPolls } from './chat.js';
 import { joinByCode, regenerateCode, leaveRoom, removeMember } from './rooms.js';
 import { resolveVerification } from './verify.js';
+import { queueConfirmationEmail, confirmEmailToken, resendConfirmation } from './emailConfirm.js';
+import { syncCollegeEmailVerification } from './collegeEmail.js';
+import { companyVerification } from './companyVerification.js';
 import { listCommands, runCommand, powerInRoomId, listCommandPermissions, setCommandPermission } from './commands.js';
 import { moderationLog } from './modlog.js';
 import { dashboard } from './dashboard.js';
@@ -25,6 +29,7 @@ import { submitReport, listReports, reportSummary, resolveReport } from './repor
 import { resolveCollegeRequest, importColleges, saveLogo, removeLogo, sendLogo } from './colleges.js';
 import { handleFeature } from './features.js';
 import { collaboration } from './collaboration.js';
+import { classrooms } from './classrooms.js';
 import { searchMentions } from './mentions.js';
 import { listBadges, lookupBadges, saveBadge, deleteBadge, manageBadges, setBadge, searchPeopleForBadges } from './badges.js';
 import { answerWithAI } from './assistant.js';
@@ -119,9 +124,10 @@ const send = (res, status, body) => {
   res.end(JSON.stringify(body));
 };
 
-function sessionResponse(userId, email) {
+function sessionResponse(userId, email, emailConfirmed = false) {
   const token = createSession(userId);
-  return { session: { access_token: token, user: { id: userId, email } }, user: { id: userId, email } };
+  const user = { id: userId, email, email_confirmed: !!emailConfirmed };
+  return { session: { access_token: token, user }, user };
 }
 
 // ---------- routes ----------
@@ -134,25 +140,95 @@ async function handleApi(req, res, url) {
     return send(res, 200, { status: 'ok', database: 'ok', timestamp: new Date().toISOString() });
   }
 
+  // Public browser settings. The Google client ID is public by design; serving it here means the site does not
+  // need to be rebuilt when GOOGLE_CLIENT_ID changes (only a server restart).
+  if (route === 'GET /api/config') {
+    return send(res, 200, { googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '' });
+  }
+
   if (route === 'POST /api/auth/signin' || route === 'POST /api/auth/signup') enforceRateLimit(req, 'auth', 10, 15 * 60 * 1000);
 
   if (route === 'POST /api/auth/signup') {
-    const { email, password, full_name } = await readJson(req);
+    const { email, password, full_name, portal_type } = await readJson(req);
     const mail = String(email || '').trim().toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) throw new HttpError('Enter a valid email address');
     if (String(password || '').length < 6) throw new HttpError('Password must be at least 6 characters');
     if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(mail)) throw new HttpError('User already registered', 409);
     const id = crypto.randomUUID();
+    // The address is NOT confirmed yet: nobody can prove they own it by typing it. They can use the app right away,
+    // but college email verification waits until they open the emailed link (server/emailConfirm.js).
     db.prepare('INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)').run(id, mail, hashPassword(password), String(full_name || '').trim());
+    const selectedPortal = ['teacher', 'recruiter', 'founder'].includes(String(portal_type)) ? String(portal_type) : 'student';
+    db.prepare('UPDATE profiles SET portal_type = ? WHERE id = ?').run(selectedPortal, id);
     ensureGeneralRoom(); // the very first sign-up creates the global General room
-    return send(res, 200, sessionResponse(id, mail));
+    queueConfirmationEmail(id, mail);
+    return send(res, 200, sessionResponse(id, mail, false));
+  }
+
+  if (route === 'POST /api/auth/google') {
+    enforceRateLimit(req, 'google-auth', 10, 15 * 60 * 1000);
+    if (!process.env.GOOGLE_CLIENT_ID) throw new HttpError('Google sign-in is not configured on this server', 503);
+    const { credential } = await readJson(req);
+    if (typeof credential !== 'string' || credential.length < 20 || credential.length > 10000) throw new HttpError('Invalid Google credential');
+    let googleUser;
+    try {
+      const verifyResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+      if (!verifyResponse.ok) throw new Error('Google rejected this credential');
+      googleUser = await verifyResponse.json();
+    } catch {
+      throw new HttpError('Could not verify your Google account. Please try again.', 401);
+    }
+    if (
+      googleUser.aud !== process.env.GOOGLE_CLIENT_ID ||
+      String(googleUser.email_verified) !== 'true' ||
+      !googleUser.email ||
+      !['accounts.google.com', 'https://accounts.google.com'].includes(googleUser.iss)
+    ) {
+      throw new HttpError('Google account verification failed', 401);
+    }
+    const mail = String(googleUser.email).trim().toLowerCase();
+    const now = new Date().toISOString();
+    let existing = db.prepare('SELECT id, email, email_confirmed_at FROM users WHERE email = ?').get(mail);
+    if (!existing) {
+      const id = crypto.randomUUID();
+      const name = String(googleUser.name || mail.split('@')[0]).slice(0, 120);
+      // Google proved the address, so it is confirmed from the start. The random password hash cannot be used as a password.
+      db.prepare('INSERT INTO users (id, email, password_hash, full_name, email_confirmed_at) VALUES (?, ?, ?, ?, ?)').run(id, mail, hashPassword(crypto.randomBytes(48).toString('hex')), name, now);
+      ensureGeneralRoom();
+      existing = { id, email: mail };
+    } else if (!existing.email_confirmed_at) {
+      // Someone may have registered this address with a password before its real owner showed up (nothing proved
+      // ownership then). Google has now proven it, so the owner takes the account over: the password that was set
+      // by whoever typed the address and every session opened with it stop working.
+      db.exec('BEGIN');
+      try {
+        db.prepare('UPDATE users SET email_confirmed_at = ?, password_hash = ? WHERE id = ?').run(now, hashPassword(crypto.randomBytes(48).toString('hex')), existing.id);
+        db.prepare('DELETE FROM sessions WHERE user_id = ?').run(existing.id);
+        db.prepare('DELETE FROM email_confirmations WHERE user_id = ?').run(existing.id);
+        db.exec('COMMIT');
+      } catch (e) {
+        db.exec('ROLLBACK');
+        throw e;
+      }
+    }
+    // The address is confirmed here, so a college domain match can verify the account (also picks up domains added later).
+    syncCollegeEmailVerification(existing.id);
+    return send(res, 200, sessionResponse(existing.id, existing.email, true));
   }
 
   if (route === 'POST /api/auth/signin') {
     const { email, password } = await readJson(req);
-    const u = db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?').get(String(email || '').trim().toLowerCase());
+    const u = db.prepare('SELECT id, email, email_confirmed_at, password_hash FROM users WHERE email = ?').get(String(email || '').trim().toLowerCase());
     if (!u || !verifyPassword(String(password || ''), u.password_hash)) throw new HttpError('Invalid login credentials', 400);
-    return send(res, 200, sessionResponse(u.id, u.email));
+    return send(res, 200, sessionResponse(u.id, u.email, !!u.email_confirmed_at));
+  }
+
+  // The link in the confirmation email. Always answers with a redirect back to the website with the outcome.
+  if (route === 'GET /api/auth/confirm-email') {
+    enforceRateLimit(req, 'confirm-email', 30, 15 * 60 * 1000);
+    const outcome = confirmEmailToken(url.searchParams.get('token'));
+    res.writeHead(302, { Location: `/?email_confirmed=${outcome}`, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' });
+    return res.end();
   }
 
   if (route === 'POST /api/auth/signout') {
@@ -194,10 +270,21 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (route === 'POST /api/classrooms') {
+    if (!user) throw new HttpError('You must be signed in', 401);
+    enforceRateLimit(req, `classrooms:${user.id}`, 100, 60_000);
+    return send(res, 200, {data: classrooms(user, await readJson(req))});
+  }
+
   if (route === 'POST /api/collaboration') {
     if (!user) throw new HttpError('Not signed in', 401);
     enforceRateLimit(req, `collab:${user.id}`, 120, 60_000);
     return send(res, 200, {data: collaboration(user, await readJson(req))});
+  }
+  if (route === 'POST /api/company-verification') {
+    if (!user) throw new HttpError('You must be signed in', 401);
+    enforceRateLimit(req, `company-verification:${user.id}`, 30, 60_000);
+    return send(res, 200, {data: companyVerification(user, await readJson(req))});
   }
   if (route === 'POST /api/features') {
     if (!user) throw new HttpError('You must be signed in', 401);
@@ -226,6 +313,12 @@ async function handleApi(req, res, url) {
   if (file && req.method === 'GET') {
     if (!user) throw new HttpError('You must be signed in', 401);
     return sendFile(req, res, user, file[1], { download: url.searchParams.get('download') === '1' });
+  }
+
+  if (route === 'POST /api/auth/resend-confirmation') {
+    if (!user) throw new HttpError('You must be signed in', 401);
+    enforceRateLimit(req, 'resend-confirmation', 5, 15 * 60 * 1000);
+    return send(res, 200, resendConfirmation(user));
   }
 
   // ---- account security ----

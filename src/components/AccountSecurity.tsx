@@ -34,7 +34,7 @@ export function AccountSecurity({ email, onEmailChanged }: { email: string; onEm
     setEmailBusy(false);
     if (error) { setEmailErr(error.message); return; }
     setNewEmail(''); setEmailPw('');
-    setEmailDone('Email updated. Use it the next time you sign in.');
+    setEmailDone('Email updated. Use it the next time you sign in. We sent a confirmation link to the new address; college verification by email only works once it is confirmed.');
     await onEmailChanged();
   };
 

@@ -66,7 +66,7 @@ export default function BadgesManager() {
       {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl px-3 py-2">{error}</p>}
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800">
-        {badges.map((b) => (
+        {badges.filter((b) => !b.system).map((b) => (
           <div key={b.id} className="p-4 flex items-center gap-3">
             <BadgePill badge={b} />
             <p className="flex-1 min-w-0 text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -76,7 +76,8 @@ export default function BadgesManager() {
             <button onClick={() => remove(b)} title="Delete" className="p-1.5 text-slate-400 hover:text-red-500 rounded-xl"><Trash2 className="w-4 h-4" /></button>
           </div>
         ))}
-        {badges.length === 0 && <p className="p-4 text-sm text-slate-400">No badges yet.</p>}
+        {badges.filter((b) => !b.system).length === 0 && <p className="p-4 text-sm text-slate-400">No badges yet.</p>}
+        <p className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">System role badges (Teacher, Verified Teacher, Recruiter, Founder) are assigned automatically and cannot be edited here.</p>
         <div className="p-3">
           <button onClick={() => setForm(blank)} className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl">
             <Plus className="w-4 h-4" /> New badge

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { db } from './db.js';
 import { HttpError } from './rest.js';
 import { hashPassword, verifyPassword } from './auth.js';
+import { queueConfirmationEmail } from './emailConfirm.js';
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
@@ -43,7 +44,7 @@ export function changePassword(user, token, body) {
   return { data: { ok: true } };
 }
 
-/** { new_email, current_password }. Updates the sign-in email and the copy on the profile. */
+/** { new_email, current_password }. Updates the sign-in email and the copy on the profile, then asks the new address to confirm. */
 export function changeEmail(user, body) {
   const mail = String(body.new_email || '').trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail) || mail.length > 254) throw new HttpError('Enter a valid email address');
@@ -52,12 +53,15 @@ export function changeEmail(user, body) {
   if (db.prepare('SELECT 1 FROM users WHERE email = ? AND id <> ?').get(mail, user.id)) throw new HttpError('That email address is already in use', 409);
   db.exec('BEGIN');
   try {
-    db.prepare('UPDATE users SET email = ? WHERE id = ?').run(mail, user.id);
+    // A new address is unproven until its owner opens the emailed link, so it can never trigger college verification before that.
+    db.prepare('UPDATE users SET email = ?, email_confirmed_at = NULL WHERE id = ?').run(mail, user.id);
     db.prepare('UPDATE profiles SET email = ? WHERE id = ?').run(mail, user.id);
+    db.prepare('DELETE FROM email_confirmations WHERE user_id = ?').run(user.id);
     db.exec('COMMIT');
   } catch (e) {
     db.exec('ROLLBACK');
     throw e;
   }
-  return { data: { email: mail } };
+  queueConfirmationEmail(user.id, mail);
+  return { data: { email: mail, confirmation_sent: true } };
 }

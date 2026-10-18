@@ -90,7 +90,7 @@ export default function GettingStarted({
     {
       n: 3,
       title: 'Join a room with a code',
-      text: 'Got a 6-digit code from a friend or a club? Enter it here',
+      text: 'Got a 10-digit code from a friend or a club? Enter it here',
       done: false,
       action: 'Enter code',
     },

@@ -403,3 +403,150 @@ html { scroll-behavior: smooth; }
   .mobile-bottom-nav { left: 6px; right: 6px; }
   .mobile-bottom-nav-item { font-size: 9px; }
 }
+
+
+/* UniLink motion system: subtle, fast, and respectful of reduced-motion preferences. */
+:root {
+  --motion-fast: 160ms;
+  --motion-base: 240ms;
+  --motion-slow: 420ms;
+  --motion-ease: cubic-bezier(.2,.75,.25,1);
+}
+html { scroll-behavior: smooth; }
+.app-main { animation: pageEnter var(--motion-slow) var(--motion-ease) both; }
+/* Desktop only, and 'backwards' fill: a forwards-filled transform would override the mobile drawer's -translate-x-full and the drawer could never close. */
+@media (min-width: 1024px) { .app-sidebar { animation: sidebarEnter 420ms var(--motion-ease) backwards; } }
+/* Mobile drawer: follow the visible viewport so the profile/sign-out block is not hidden behind browser bars. */
+@media (max-width: 1023px) { .app-sidebar { height: 100vh; height: 100dvh; max-width: 88vw; } }
+.app-topbar { animation: topbarEnter 360ms var(--motion-ease) both; }
+button, [role="button"], a, input, textarea, select {
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast) ease;
+}
+button:active, [role="button"]:active { transform: scale(.975); }
+button:disabled, [role="button"][aria-disabled="true"] { transform: none; }
+.app-main article, .app-main [class*="rounded-xl"], .app-main [class*="rounded-2xl"] {
+  transition: box-shadow var(--motion-base) var(--motion-ease),
+              border-color var(--motion-base) ease,
+              transform var(--motion-base) var(--motion-ease);
+}
+.app-main article:hover, .app-main [class*="rounded-xl"]:hover, .app-main [class*="rounded-2xl"]:hover {
+  border-color: rgba(124, 99, 239, .24);
+}
+.app-main .community-hero, .app-main .events-hero {
+  animation: heroEnter 600ms var(--motion-ease) both;
+}
+.app-main .community-hero-orb-one { animation: orbFloat 9s ease-in-out infinite; }
+.app-main .community-hero-orb-two { animation: orbFloat 7s ease-in-out infinite reverse; }
+.brand-mark { transition: transform 240ms var(--motion-ease), box-shadow 240ms ease; }
+.brand-mark:hover { transform: translateY(-2px) rotate(-4deg); box-shadow: 0 9px 22px rgba(83,58,180,.16); }
+.user-avatar { transition: transform 180ms var(--motion-ease), box-shadow 180ms ease; }
+.user-avatar:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 8px 18px rgba(99,65,220,.28); }
+.nav-item-active { box-shadow: 0 5px 16px rgba(96,64,216,.18); }
+.animate-fade-in { animation: fadeIn 320ms var(--motion-ease) both; }
+.animate-slide-up { animation: slideUp 360ms var(--motion-ease) both; }
+.animate-slide-in-right { animation: slideInRight 280ms var(--motion-ease) both; }
+.animate-pop-in { animation: popIn 260ms var(--motion-ease) both; }
+.animate-float { animation: gentleFloat 5s ease-in-out infinite; }
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes sidebarEnter {
+  from { opacity: .7; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes topbarEnter {
+  from { opacity: .7; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroEnter {
+  from { opacity: 0; transform: translateY(12px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.96) translateY(5px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes orbFloat {
+  0%, 100% { transform: translate3d(0,0,0); }
+  50% { transform: translate3d(-10px,8px,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+
+/* Chat-style pages (Chat rooms + Messages): the page is locked to the viewport and only the
+   message list scrolls. Header, conversation bar and send box stay fixed in place. */
+.app-main.chat-locked-main { flex: 1 1 0%; min-height: 0; overflow: hidden; animation: none; }
+.app-main.chat-locked-main > * { height: 100%; }
+.chat-message-list { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.chat-composer { flex: none; padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+@media (max-width: 1023px) {
+  html:has(.chat-locked-main), body:has(.chat-locked-main) { overflow: hidden; overscroll-behavior: none; }
+}
+
+/* Mobile usability pass: safe areas, horizontal overflow, touch targets and scrollable content. */
+html, body, #root { min-height: 100%; width: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+body { overflow-x: clip; }
+.app-shell { width: 100%; max-width: 100vw; overflow-x: clip; }
+.app-main { width: 100%; min-width: 0; overflow-x: clip; }
+.app-main img, .app-main video, .app-main canvas, .app-main iframe { max-width: 100%; }
+.app-main table { max-width: 100%; }
+@media (max-width: 767px) {
+  .app-shell:not(:has(.chat-locked-main)) { min-height: 100dvh; }
+  .app-topbar { gap: 7px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+  .app-topbar .icon-button { width: 38px; height: 38px; border-radius: 12px; }
+  .app-topbar .topbar-profile { padding: 3px; }
+  .app-topbar .topbar-profile .user-avatar { width: 32px; height: 32px; }
+  .app-main:not(.chat-locked-main) { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .app-main > * { min-width: 0; max-width: 100%; }
+  .app-main .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+  .app-main input:not([type="checkbox"]):not([type="radio"]),
+  .app-main textarea, .app-main select { max-width: 100%; font-size: 16px; }
+  .app-main button, .app-main [role="button"] { touch-action: manipulation; }
+  .mobile-bottom-nav {
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .mobile-bottom-nav-item { min-height: 48px; font-size: clamp(9px, 2.6vw, 11px); }
+  .mobile-bottom-nav-icon svg { width: 19px; height: 19px; }
+  /* Keep wide data views usable without stretching the whole viewport. */
+  .app-main table { display: block; overflow-x: auto; white-space: nowrap; }
+  .app-main pre { max-width: 100%; overflow-x: auto; }
+  .app-main .community-hero, .app-main .events-hero, .app-main .dashboard-welcome { max-width: 100%; }
+  /* Mobile dialogs should fit between the status and navigation areas. */
+  [role="dialog"] { max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow-y: auto; }
+}
+@media (max-width: 380px) {
+  .app-topbar { gap: 5px; }
+  .app-topbar .topbar-search { padding-left: 8px; padding-right: 8px; }
+  .app-topbar .topbar-profile .max-w-\[76px\] { display: none; }
+  .mobile-bottom-nav { border-radius: 17px; }
+}
+@media (max-width: 767px) and (orientation: landscape) {
+  .mobile-bottom-nav { left: 12vw; right: 12vw; }
+  .mobile-bottom-nav-item { min-height: 42px; }
+}
+@supports (padding: env(safe-area-inset-bottom)) {
+  .chat-composer { padding-bottom: max(.75rem, env(safe-area-inset-bottom)); }
+}
