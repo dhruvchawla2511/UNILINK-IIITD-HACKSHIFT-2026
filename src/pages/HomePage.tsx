@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, CalendarDays, MapPin, Building2, Tag, Images, Film, ArrowRight, ArrowUpRight, Settings2, Lock, MessageSquare, MessageCircle, Compass, UserRound, Sparkles, Clock3 } from 'lucide-react';
+import { Loader2, CalendarDays, MapPin, Building2, Tag, Images, Film, ArrowRight, ArrowUpRight, Lock, MessageSquare, MessageCircle, Compass, UserRound, Sparkles, Clock3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, type EventItem, type HomeSettings, type HomeSlide } from '@/lib/supabase';
 import { defaultHomeSettings, fetchMediaRows, rowToMedia } from '@/lib/content';
@@ -36,7 +36,6 @@ function SectionHeader({
 
 export default function HomePage({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const { profile } = useAuth();
-  const isSuperAdmin = profile?.role === 'super_admin';
 
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<HomeSettings>(defaultHomeSettings);

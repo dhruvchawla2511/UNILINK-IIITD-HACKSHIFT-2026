@@ -37,7 +37,12 @@ export default function ProfessionalContentStudio({ portalType }: { portalType: 
     if (!profile?.id || !title.trim() || !description.trim()) return;
     setBusy(true); setMessage('');
     const payload = { title: title.trim(), description: description.trim(), event_date: date, end_date: date, location: location.trim() || 'Online', category, created_by: profile.id, college_id: visibility === 'college' ? profile.college_id ?? null : null, visibility, show_on_home: true };
+
+    const editablePayload = { ...payload };
+    delete (editablePayload as Partial<typeof payload>).created_by;
+
     const { created_by: _owner, ...editablePayload } = payload;
+
     const { error } = editing
       ? await supabase.from('events').update(editablePayload).eq('id', editing.id).eq('created_by', profile.id)
       : await supabase.from('events').insert(payload);

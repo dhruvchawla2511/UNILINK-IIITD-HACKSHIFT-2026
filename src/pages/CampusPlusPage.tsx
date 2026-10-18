@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { BookOpen, Building2, CalendarDays, CheckCircle2, FileText, GraduationCap, Handshake, LibraryBig, Plus, Search, ShieldCheck, Store, Users, X } from 'lucide-react';
+import { BookOpen, CalendarDays, CheckCircle2, FileText, GraduationCap, Handshake, LibraryBig, Plus, Search, ShieldCheck, Store, Users, X } from 'lucide-react';
 import type { Page } from '@/components/Layout';
 
 type Kind = 'mentor' | 'research' | 'marketplace' | 'resource';

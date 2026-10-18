@@ -3,6 +3,8 @@ import { apiPost, fileUrl, uploadFile } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { BookOpen, BriefcaseBusiness, Search, PackageSearch, ShieldCheck, Plus, Users, ImagePlus, Loader2, CheckCircle2, ExternalLink, Flag, Ban, GraduationCap, CalendarDays, Sparkles, X } from 'lucide-react';
 
+// API payloads are action-dependent JSON records; validate individual fields at render/use sites.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 type Tab = 'overview' | 'study' | 'opportunities' | 'lost' | 'search' | 'safety';
 const tabs: { id: Tab; label: string; icon: typeof Users }[] = [
@@ -44,6 +46,8 @@ export default function CampusHubPage() {
   const [item, setItem] = useState({ title: '', description: '', item_type: 'Lost', location: '', contact_note: '' });
 
   const request = useCallback(async (action: string, payload: Row = {}) => {
+    // The endpoint returns different record shapes for each feature action.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await apiPost<any>('/api/features', { action, ...payload });
     if (result.error) throw new Error(result.error.message);
     return result.data;

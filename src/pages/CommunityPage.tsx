@@ -9,6 +9,8 @@ import UserBadges from '@/components/UserBadges';
 import { useDirectMessages } from '@/context/DirectMessageContext';
 
 type Tab = 'feed' | 'clubs' | 'events' | 'market' | 'discover' | 'notifications';
+// API payloads vary by community action and are handled as JSON records.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyRow = Record<string, any>;
 type RankFields = Pick<Profile, 'college_role' | 'committee_name'>;
 const tabs: { id: Tab; label: string; icon: typeof Users }[] = [

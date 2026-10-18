@@ -15,8 +15,13 @@ const field='w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-s
 const card='rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900';
 const btn='rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50';
 export default function CollaboratePage(){
+
+ const {user,profile:authProfile}=useAuth();
+ const canPostOpportunity=['recruiter','founder','teacher'].includes(authProfile?.portal_type??'')||['admin','super_admin'].includes(authProfile?.role??'');
+
  const {user,profile}=useAuth();
  const canPostOpportunity=['recruiter','founder','teacher'].includes(profile?.portal_type??'')||['admin','super_admin'].includes(profile?.role??'');
+
  const [uploading,setUploading]=useState(false);
  const [tab,setTab]=useState<'discover'|'mentorship'|'opportunities'|'events'|'teams'|'workspace'|'connections'>(()=>{try{const w=sessionStorage.getItem('unilink:collab-tab');sessionStorage.removeItem('unilink:collab-tab');if(w&&['discover','mentorship','opportunities','events','teams','workspace','connections'].includes(w))return w as 'discover'|'mentorship'|'opportunities'|'events'|'teams'|'workspace'|'connections';}catch{/* storage unavailable */}return 'discover';});
  const [people,setPeople]=useState<Person[]>([]),[projects,setProjects]=useState<Project[]>([]),[members,setMembers]=useState<Member[]>([]),[tasks,setTasks]=useState<Task[]>([]),[teamFiles,setTeamFiles]=useState<TeamFile[]>([]),[connections,setConnections]=useState<Connection[]>([]),[mentorships,setMentorships]=useState<Mentorship[]>([]),[opportunities,setOpportunities]=useState<Opportunity[]>([]),[networkEvents,setNetworkEvents]=useState<NetworkEvent[]>([]);

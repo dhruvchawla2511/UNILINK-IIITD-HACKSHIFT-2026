@@ -1,6 +1,5 @@
 import { Component, useCallback, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
-import { supabase, type ChatRoom } from '@/lib/supabase';
-import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
+import { supabase } from '@/lib/supabase';
 import PwaHelper from '@/components/PwaHelper';
 import EmailConfirmationBanner from '@/components/EmailConfirmationBanner';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
@@ -61,9 +60,8 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
 }
 
 function AppContent() {
-  const { user, profile, loading, refreshProfile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [page, setPage] = useState<Page>(() => pageFromHash());
-  const [guideHidden, setGuideHidden] = useState(false);
   const [roomToOpen, setRoomToOpen] = useState<string | null>(null);
   const [dmTarget, setDmTarget] = useState<string | null>(null); // someone to open a direct message with
   const [professionalMode, setProfessionalMode] = useState(false);
@@ -140,18 +138,6 @@ function AppContent() {
 
   // Redirect non-admins away from admin page
   const effectivePage = (page === 'admin' || page === 'analytics') && profile.role === 'student' ? 'home' : page;
-
-  // New people get the guide once (choose college, get verified, join a room). Closing or finishing it ends it.
-  const endGuide = async () => {
-    setGuideHidden(true);
-    await supabase.from('profiles').update({ onboarding_done: true }).eq('id', profile.id);
-    refreshProfile();
-  };
-  const finishGuide = (room?: ChatRoom) => {
-    endGuide();
-    if (room) setRoomToOpen(room.id);
-    navigateToPage('chat');
-  };
 
   return (
     <DirectMessageProvider onOpen={(userId) => { setDmTarget(userId); navigateToPage('messages'); }}>

@@ -76,7 +76,14 @@ export interface WikiSummary {
 
 const wikiCache = new Map<string, WikiSummary | null>();
 
-async function getJson(url: string, ms = 7000): Promise<any> {
+type WikipediaApiResponse = {
+  query?: { search?: Array<{ title: string }> };
+  type?: string; extract?: string; title?: string;
+  content_urls?: { desktop?: { page?: string } };
+  thumbnail?: { source?: string }; description?: string;
+};
+
+async function getJson(url: string, ms = 7000): Promise<WikipediaApiResponse> {
   const ctl = new AbortController();
   const t = window.setTimeout(() => ctl.abort(), ms);
   try {
@@ -102,7 +109,7 @@ export async function fetchWikipedia(college: College): Promise<WikiSummary | nu
       // Skip unrelated articles: the title must share a meaningful word with the college's name.
       if (!tokens(title).some((t) => nameTokens.has(t))) continue;
       const s = await getJson(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`);
-      if (!s || s.type === 'disambiguation' || !s.extract) continue;
+      if (!s || s.type === 'disambiguation' || !s.extract || !s.title) continue;
       const out: WikiSummary = {
         title: s.title,
         extract: String(s.extract),
