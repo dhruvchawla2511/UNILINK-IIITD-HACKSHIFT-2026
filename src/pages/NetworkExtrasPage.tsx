@@ -4,8 +4,11 @@ import { apiPost } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
 type Tab = 'mentorship' | 'knowledge' | 'interviews';
+
 // API payloads vary by mentorship, knowledge, and interview action.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
 type Row = Record<string, any>;
 const card = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
 const field = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950';
@@ -32,6 +35,9 @@ export default function NetworkExtrasPage({ initialTab = 'mentorship' }: { initi
   const [offerAvailability, setOfferAvailability] = useState('');
   const [offerDuration, setOfferDuration] = useState('30');
   const [offerMode, setOfferMode] = useState('online');
+
+  const [requestOffer, setRequestOffer] = useState('');
+
   const [preferredAt, setPreferredAt] = useState('');
   const [goal, setGoal] = useState('');
   const [resourceTitle, setResourceTitle] = useState('');
@@ -47,8 +53,11 @@ export default function NetworkExtrasPage({ initialTab = 'mentorship' }: { initi
   const [interviewNotes, setInterviewNotes] = useState('');
 
   const request = useCallback(async (action: string, payload: Row = {}) => {
+
     // The endpoint returns different record shapes for each feature action.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+
     const result = await apiPost<any>('/api/features', { action, ...payload });
     if (result.error) throw new Error(result.error.message);
     return result.data;
