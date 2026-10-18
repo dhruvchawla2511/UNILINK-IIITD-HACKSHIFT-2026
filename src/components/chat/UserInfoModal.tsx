@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BadgeCheck, CalendarDays, GraduationCap, Loader2, MapPin, MessageCircle, Shield, X } from 'lucide-react';
-import { supabase, apiPost, type Profile, type ProfileFieldValue } from '@/lib/supabase';
+import { supabase, apiPost, fileUrl, type Profile, type ProfileFieldValue } from '@/lib/supabase';
 import { displayFieldValue } from '@/components/ProfileFieldInput';
 import { rankLabel } from '@/lib/collegeRoles';
 import Avatar from '@/components/Avatar';
@@ -17,6 +17,7 @@ export function UserInfoModal({ userId, onClose }: { userId: string; onClose: ()
   const [person, setPerson] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [extra, setExtra] = useState<ProfileFieldValue[]>([]);
+  const [showFullPhoto, setShowFullPhoto] = useState(false);
   const { profile: me } = useAuth();
   const { openDirectMessage } = useDirectMessages();
 
@@ -56,7 +57,7 @@ export function UserInfoModal({ userId, onClose }: { userId: string; onClose: ()
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-sm max-h-[90vh] overflow-y-auto animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="h-20 bg-gradient-to-r from-brand-600 to-accent-500 relative">
           <button onClick={onClose} aria-label="Close" className="absolute top-3 right-3 p-1.5 rounded-full bg-black/20 hover:bg-black/30 text-white">
             <X className="w-4 h-4" />
@@ -68,8 +69,10 @@ export function UserInfoModal({ userId, onClose }: { userId: string; onClose: ()
         ) : !person ? (
           <p className="py-12 text-center text-sm text-slate-400">This person could not be found.</p>
         ) : (
-          <div className="px-6 pb-6 -mt-10">
-            <Avatar name={person.full_name} url={person.avatar_url} className="w-20 h-20 text-3xl border-4 border-white dark:border-slate-900" fallbackClass="bg-brand-500" />
+          <div className="px-6 pb-6 pt-5">
+            <button type="button" disabled={!person.avatar_url} onClick={() => setShowFullPhoto(true)} aria-label="View full profile photo" className="block rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-default">
+              <Avatar name={person.full_name} url={person.avatar_url} className="w-24 h-24 text-3xl border-4 border-white dark:border-slate-900" fallbackClass="bg-brand-500" />
+            </button>
 
             <h3 className="mt-2 font-heading font-semibold text-lg text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
               {person.full_name}
@@ -134,6 +137,12 @@ export function UserInfoModal({ userId, onClose }: { userId: string; onClose: ()
           </div>
         )}
       </div>
+      {showFullPhoto && person?.avatar_url && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={(e) => { e.stopPropagation(); setShowFullPhoto(false); }}>
+          <button type="button" aria-label="Close full profile photo" onClick={(e) => { e.stopPropagation(); setShowFullPhoto(false); }} className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"><X className="h-5 w-5" /></button>
+          <img src={person.avatar_url.startsWith('/api/files/') ? fileUrl(person.avatar_url) : person.avatar_url} alt={`${person.full_name}'s full profile photo`} className="max-h-[90vh] max-w-[92vw] object-contain rounded-xl" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

@@ -6,14 +6,14 @@ A student is verified for a college automatically when **all** of these are true
 2. The address domain **exactly equals** the domain registered for **exactly one** college (`colleges.domain`).
 3. The domain is not a public mail provider (gmail.com, outlook.com, yahoo.com and similar are never trusted).
 
-Everyone else stays in the normal manual verification flow (officers/admins approve under Profile > Verify students). People who are already verified are never changed, and a waiting manual request for the matched college is closed automatically.
+Gmail (`gmail.com`), including a teacher's personal Gmail address, cannot prove university affiliation and is never treated as a university domain. Everyone else stays in the normal manual verification flow (officers/admins approve under Profile > Verify students). People who are already verified are never changed, and a waiting manual request for the matched college is closed automatically.
 
 ## 1. Configure college domains (Admin Panel > Colleges)
 
-Put the official **mail** domain in each college's `domain`, not an email address. `iitd.ac.in`, `https://www.iitd.ac.in/` and `www.iitd.ac.in` all mean `iitd.ac.in`.
+Put the official **mail** domain in each college's `domain`, not an email address. `iitd.ac.in`, `https://www.iitd.ac.in/` and `www.iitd.ac.in` all mean `iitd.ac.in`. The app also seeds a small set of separately confirmed institutional email-domain aliases in `college_email_domains` for colleges whose staff email domain differs from their website domain.
 
 - The match is exact. `students.example.edu` does **not** match a college registered as `example.edu`; register the domain students' mail actually uses.
-- Only register domains you have checked belong to that college. The starter colleges ship with website domains from `server/collegeSeed.js`; confirm they are also the mail domains before relying on them, and clear the ones that are not.
+- Only register domains you have checked belong to that college. Starter website domains in `server/collegeSeed.js` are still candidates and should be confirmed as mail domains before relying on them. A few documented aliases are seeded in `server/db.js`; administrators should review them before production use.
 - Two colleges with the same domain are ambiguous, so nobody is auto-verified for that domain until one is fixed.
 
 ## 2. Set up email sending (Node server, the default)

@@ -10,10 +10,12 @@ This release adds an installable PWA shell and offline-state messaging while pre
 - Campus clubs and study groups with membership controls.
 - Events with RSVP, organizer attendance tracking, and attendance certificates.
 - Marketplace listings, saved listings, lost-and-found, and safety reports/blocking.
-- Career opportunities, saved opportunities, and application tracking.
+- Career opportunities, saved opportunities, student application tracking, and employer-side applicant review/status updates.
 - Planner and student study/career tools.
 - Admin moderation/report review, college management, and platform analytics.
 - PWA manifest, service worker shell caching, install prompt, and online/offline indicator.
+
+- Professional network discovery uses verified, available profiles, supports local search, and can send connection requests through server-checked actions.
 
 ## PWA privacy design
 
@@ -29,7 +31,9 @@ The service worker only caches the static app shell and static assets. It explic
 6. Configure upload limits, MIME validation, abuse/rate limits, logging redaction, and report escalation.
 7. Test two accounts in separate browsers for friend requests, privacy restrictions, blocking, messaging, event RSVP, marketplace visibility, and account deletion.
 8. Test mobile sizes, keyboard navigation, screen-reader labels, dark mode, and the PWA install flow over HTTPS.
-9. Review legal/privacy disclosures and retention/deletion behavior before inviting real students.
+9. Test recruiter/founder/teacher opportunity publishing permissions, student application status visibility, owner-only applicant review, duplicate applications, and deadline handling.
+10. Test professional-network discovery and connection request/acceptance with two verified accounts.
+11. Review legal/privacy disclosures and retention/deletion behavior before inviting real students.
 
 ## Deployment note
 

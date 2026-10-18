@@ -1,17 +1,70 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { Loader2, Mail, Lock, User, ArrowRight, Sun, Moon, MessageSquare, CalendarDays, Building2 } from 'lucide-react';
+import { emailConfirmNotice } from '@/lib/emailConfirmNotice';
+import { Loader2, Mail, Lock, User, ArrowRight, Sun, Moon, MessageSquare, CalendarDays, Building2, BadgeCheck, GraduationCap, BriefcaseBusiness, Lightbulb, Users } from 'lucide-react';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (config: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const [selectedPortal, setSelectedPortal] = useState<'student' | 'teacher' | 'recruiter' | 'founder'>('student');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const [confirmNotice] = useState(() => emailConfirmNotice());
+
+  // Build-time value first; otherwise the server's runtime setting (GOOGLE_CLIENT_ID in .env / host settings).
+  const [clientId, setClientId] = useState<string>((import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '');
+  useEffect(() => {
+    if (clientId) return;
+    let alive = true;
+    fetch('/api/config').then((r) => (r.ok ? r.json() : null)).then((c) => { if (alive && c?.googleClientId) setClientId(c.googleClientId); }).catch(() => {});
+    return () => { alive = false; };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!clientId || !googleButtonRef.current) return;
+    let cancelled = false;
+    const render = () => {
+      if (cancelled || !googleButtonRef.current || !window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: { credential?: string }) => {
+          if (!response.credential) return;
+          setError(null); setLoading(true);
+          const result = await signInWithGoogle(response.credential);
+          if (result.error) setError(result.error);
+          setLoading(false);
+        },
+      });
+      googleButtonRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(googleButtonRef.current, { theme: theme === 'dark' ? 'filled_black' : 'outline', size: 'large', shape: 'rectangular', text: mode === 'signup' ? 'signup_with' : 'signin_with', width: 340, logo_alignment: 'left' });
+    };
+    if (window.google?.accounts?.id) render();
+    else {
+      let script = document.querySelector<HTMLScriptElement>('script[data-google-identity]');
+      if (!script) { script = document.createElement('script'); script.src = 'https://accounts.google.com/gsi/client'; script.async = true; script.defer = true; script.dataset.googleIdentity = 'true'; document.head.appendChild(script); }
+      script.addEventListener('load', render);
+    }
+    return () => { cancelled = true; };
+  }, [mode, theme, signInWithGoogle, clientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +77,7 @@ export default function AuthPage() {
         setLoading(false);
         return;
       }
-      const { error } = await signUp(email, password, fullName);
+      const { error } = await signUp(email, password, fullName, selectedPortal);
       if (error) setError(error);
     } else {
       const { error } = await signIn(email, password);
@@ -40,7 +93,7 @@ export default function AuthPage() {
   ];
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-white dark:bg-slate-950">
+    <div className="h-dvh overflow-hidden grid lg:grid-cols-[1.1fr_1fr] bg-white dark:bg-slate-950">
       <aside className="hidden lg:flex flex-col justify-between relative overflow-hidden bg-brand-950 text-white p-14">
         <div className="absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-brand-600/40 blur-3xl" />
         <div className="absolute -bottom-40 -right-20 w-[26rem] h-[26rem] rounded-full bg-accent-500/20 blur-3xl" />
@@ -60,13 +113,20 @@ export default function AuthPage() {
             ))}
           </ul>
         </div>
-        <p className="relative text-sm text-brand-200/60">Connect Beyond Campus</p>
+        <div className="relative mt-6 max-w-lg">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[.18em] text-brand-200">Choose your portal</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[{ id: 'teacher', label: 'Teacher portal', text: 'Mentor & guide', icon: GraduationCap }, { id: 'recruiter', label: 'Recruiter portal', text: 'Find talent', icon: BriefcaseBusiness }, { id: 'founder', label: 'Founder portal', text: 'Build & hire', icon: Lightbulb }, { id: 'student', label: 'Student portal', text: 'Campus community', icon: Users }].map(({ id, label, text, icon: Icon }) => <button key={id} type="button" onClick={() => setSelectedPortal(id as typeof selectedPortal)} className={`rounded-2xl border p-3 text-left transition ${selectedPortal === id ? 'border-white bg-white/15 ring-1 ring-white/60' : 'border-white/15 bg-white/5 hover:bg-white/10'}`}><Icon className="mb-2 h-5 w-5 text-brand-200"/><span className="block text-sm font-semibold">{label}</span><span className="mt-1 block text-xs text-brand-100/70">{text}</span></button>)}
+          </div>
+        </div>
+        <p className="relative mt-5 text-sm text-brand-200/60">Connect Beyond Campus</p>
       </aside>
 
-      <main className="relative flex items-center justify-center p-6 sm:p-10">
-        <button onClick={toggleTheme} className="absolute top-4 right-4 p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle dark mode">
+      <main className="relative min-h-0 overflow-y-auto overscroll-contain scrollbar-thin">
+        <button onClick={toggleTheme} className="fixed top-4 right-4 z-10 p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle dark mode">
           {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-300" />}
         </button>
+        <div className="flex min-h-full items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm animate-slide-up">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <img src="/logo.png" alt="" className="w-9 h-9 object-contain" />
@@ -80,7 +140,34 @@ export default function AuthPage() {
             </button>
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          {confirmNotice && (
+            <div role="status" className={`mt-5 rounded-xl border p-3 text-sm ${confirmNotice.ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200' : 'border-red-200 bg-red-50 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300'}`}>
+              {confirmNotice.text}{confirmNotice.ok ? ' Sign in to continue.' : ''}
+            </div>
+          )}
+          {mode === 'signup' && (
+            <div className="mt-5">
+              <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">I’m joining as</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[{ id: 'student', label: 'Student', icon: Users }, { id: 'teacher', label: 'Teacher', icon: GraduationCap }, { id: 'recruiter', label: 'Recruiter', icon: BriefcaseBusiness }, { id: 'founder', label: 'Founder', icon: Lightbulb }].map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setSelectedPortal(id as typeof selectedPortal)} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${selectedPortal === id ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500/20 dark:bg-brand-500/10 dark:text-brand-300' : 'border-slate-200 text-slate-600 hover:border-brand-300 dark:border-slate-700 dark:text-slate-300'}`}><Icon className="h-4 w-4"/>{label}</button>)}
+              </div>
+              {selectedPortal !== 'student' && <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">Your account will open a dedicated professional workspace. Student tools stay out of this portal, and you can switch to the student side any time.</p>}
+            </div>
+          )}
+          <div className="mt-6 space-y-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/60 dark:bg-emerald-950/30 p-3.5 flex items-start gap-3">
+              <BadgeCheck className="w-5 h-5 mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">Use your official college email</p>
+                <p className="mt-1 text-xs leading-relaxed text-emerald-800/80 dark:text-emerald-300/80">Once your email is confirmed, Unilink can automatically verify your college account when its domain is registered in our college directory. Personal email addresses may need manual verification.</p>
+              </div>
+            </div>
+            <div ref={googleButtonRef} className="flex justify-center min-h-10" aria-label="Continue with Google" />
+            {!clientId && <p className="text-xs text-center text-slate-400">Google sign-in needs a Google OAuth client ID in the environment settings.</p>}
+            <div className="flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200 dark:bg-slate-700"/><span>or continue with email</span><span className="h-px flex-1 bg-slate-200 dark:bg-slate-700"/></div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
             {mode === 'signup' && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Full name</label>
@@ -115,6 +202,7 @@ export default function AuthPage() {
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{mode === 'signup' ? 'Create account' : 'Sign in'}<ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
+        </div>
         </div>
       </main>
     </div>

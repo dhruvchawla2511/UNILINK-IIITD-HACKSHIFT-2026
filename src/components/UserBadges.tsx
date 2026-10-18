@@ -1,9 +1,9 @@
-import { BadgeCheck, BookOpen, Crown, Flag, GraduationCap, Heart, Shield, Sparkles, Star, Users, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, BookOpen, BriefcaseBusiness, Crown, Flag, GraduationCap, Heart, Rocket, Shield, Sparkles, Star, Users, type LucideIcon } from 'lucide-react';
 import { useUserBadges, type Badge } from '@/lib/badges';
 
 const ICONS: Record<string, LucideIcon> = {
   'badge-check': BadgeCheck, 'graduation-cap': GraduationCap, star: Star, 'book-open': BookOpen, shield: Shield,
-  sparkles: Sparkles, crown: Crown, heart: Heart, flag: Flag, users: Users,
+  sparkles: Sparkles, crown: Crown, heart: Heart, flag: Flag, users: Users, 'briefcase-business': BriefcaseBusiness, rocket: Rocket,
 };
 
 export const BADGE_STYLES: Record<string, string> = {

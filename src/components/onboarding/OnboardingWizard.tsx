@@ -115,7 +115,7 @@ export default function OnboardingWizard({
   // ---- step 3 ----
   const joinWithCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.length !== 6) return setError('Enter the 6-digit room code');
+    if (code.length !== 10) return setError('Enter the 10-digit room code');
     setBusy(true);
     setError(null);
     const { data, error } = await apiPost<ChatRoom>('/api/chat/room/join', { code });
@@ -143,7 +143,7 @@ export default function OnboardingWizard({
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 {step === 1 && 'Let us connect you with your college in three quick steps.'}
                 {step === 2 && 'Verified students can see their college chats.'}
-                {step === 3 && 'Have a 6-digit code from a friend or your college? Use it here.'}
+                {step === 3 && 'Have a 10-digit code from a friend or your college? Use it here.'}
               </p>
             </div>
             <button onClick={onClose} title="Close" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 shrink-0">
@@ -307,11 +307,11 @@ export default function OnboardingWizard({
                     inputMode="numeric"
                     autoComplete="off"
                     value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
-                    className="w-full px-3 py-3 text-center text-2xl font-mono font-semibold tracking-[0.4em] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30"
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="0000000000"
+                    className="w-full px-3 py-3 text-center text-2xl font-mono font-semibold tracking-[0.2em] bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/30"
                   />
-                  <button type="submit" disabled={busy || code.length !== 6} className={`${primary} w-full`}>
+                  <button type="submit" disabled={busy || code.length !== 10} className={`${primary} w-full`}>
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Join room
                   </button>
                   <p className="text-xs text-slate-400">Every chat room has its own code, shown at the top of the room. You can always join more rooms later with the key button in Chat.</p>

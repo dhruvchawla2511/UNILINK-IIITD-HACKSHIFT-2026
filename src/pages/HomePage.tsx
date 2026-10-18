@@ -94,33 +94,7 @@ export default function HomePage({ onNavigate }: { onNavigate: (page: Page) => v
   return (
     <div className="h-full overflow-y-auto scrollbar-thin">
       <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-10 space-y-12">
-        {/* Personalized dashboard hero */}
-        <section className="dashboard-welcome relative overflow-hidden rounded-[30px] px-6 py-7 sm:px-9 sm:py-9 lg:px-11 lg:py-10">
-          <div className="dashboard-welcome-glow dashboard-glow-one" />
-          <div className="dashboard-welcome-glow dashboard-glow-two" />
-          <div className="relative z-10 flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[.16em] text-violet-100 backdrop-blur-sm">
-                <Sparkles className="h-3.5 w-3.5" /> Your campus, one place
-              </div>
-              <p className="mb-2 text-sm font-medium text-violet-200">{new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''} 👋</p>
-              <h1 className="max-w-2xl font-heading text-3xl font-bold leading-[1.08] tracking-tight text-white sm:text-4xl lg:text-[46px]">
-                {settings.hero_title || 'Find your people. Make campus yours.'}
-              </h1>
-              {settings.hero_subtitle && <p className="mt-4 max-w-xl text-sm leading-6 text-violet-100/85 sm:text-base">{settings.hero_subtitle}</p>}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button onClick={() => onNavigate('community')} className="dashboard-primary-cta">Explore community <ArrowUpRight className="h-4 w-4" /></button>
-                <button onClick={() => onNavigate('events')} className="dashboard-secondary-cta"><CalendarDays className="h-4 w-4" /> Discover events</button>
-              </div>
-            </div>
-            <div className="relative z-10 grid grid-cols-3 gap-2 sm:gap-3 lg:min-w-[290px]">
-              <div className="dashboard-mini-stat"><CalendarDays className="mb-3 h-4 w-4 text-violet-200"/><span className="text-2xl font-bold text-white">{upcomingEvents.length}</span><span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-violet-200">Upcoming</span></div>
-              <div className="dashboard-mini-stat"><Images className="mb-3 h-4 w-4 text-violet-200"/><span className="text-2xl font-bold text-white">{images.length}</span><span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-violet-200">Photos</span></div>
-              <div className="dashboard-mini-stat"><Film className="mb-3 h-4 w-4 text-violet-200"/><span className="text-2xl font-bold text-white">{videos.length}</span><span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-violet-200">Videos</span></div>
-            </div>
-          </div>
-          {isSuperAdmin && <button onClick={() => onNavigate('admin')} className="absolute right-5 top-5 z-20 inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"><Settings2 className="h-3.5 w-3.5" /> Edit home</button>}
-        </section>
+        {/* Student portal opens directly to campus shortcuts; no welcome hero. */}
 
         {/* Quick actions */}
         <section aria-label="Quick actions" className="space-y-4">

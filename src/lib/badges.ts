@@ -12,10 +12,11 @@ export interface Badge {
   description: string;
   officers_can_award: boolean;
   sort_order: number;
+  system?: boolean;
 }
 
 export const BADGE_COLORS = ['slate', 'blue', 'emerald', 'amber', 'rose', 'violet', 'sky'] as const;
-export const BADGE_ICONS = ['badge-check', 'graduation-cap', 'star', 'book-open', 'shield', 'sparkles', 'crown', 'heart', 'flag', 'users'] as const;
+export const BADGE_ICONS = ['badge-check', 'graduation-cap', 'star', 'book-open', 'shield', 'sparkles', 'crown', 'heart', 'flag', 'users', 'briefcase-business', 'rocket'] as const;
 
 const defs = new Map<string, Badge>();
 const held = new Map<string, string[]>(); // user id -> badge ids (display order)

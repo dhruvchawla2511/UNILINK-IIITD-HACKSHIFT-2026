@@ -320,7 +320,8 @@ export default function ChatPage({ initialRoomId = null, onInitialRoomHandled }:
 
   // Notices (command replies, moderation lines) scroll into view like messages do
   useEffect(() => {
-    if (notices.length) messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const list = listRef.current;
+    if (notices.length && list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
   }, [notices]);
 
   // Auto-scroll
@@ -329,7 +330,9 @@ export default function ChatPage({ initialRoomId = null, onInitialRoomHandled }:
       skipAutoScroll.current = false;
       return;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll only the message list (scrollIntoView would also scroll the whole page)
+    const list = listRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
   const addFiles = (list: FileList | File[]) => {
@@ -769,7 +772,7 @@ export default function ChatPage({ initialRoomId = null, onInitialRoomHandled }:
             )}
 
             {/* Messages */}
-            <div ref={listRef} className="chat-message-list min-h-0 flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-3">
+            <div ref={listRef} className="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-4 space-y-3">
               {hasOlder && (
                 <div className="flex justify-center">
                   <button
@@ -1153,7 +1156,7 @@ function CreateRoomModal({
                 <Lock className="w-4 h-4 text-slate-400" />
                 <div>
                   <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Private Room</p>
-                  <p className="text-xs text-slate-400">Only people you give the 6-digit code to</p>
+                  <p className="text-xs text-slate-400">Only people you give the 10-digit code to</p>
                 </div>
               </label>
               {canGlobal && (

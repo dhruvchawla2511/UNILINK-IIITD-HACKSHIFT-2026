@@ -364,7 +364,7 @@ export const policies = {
     select: (c) => ['room_id IN (SELECT id FROM chat_rooms WHERE ' + visibleRoomSql(c)[0] + ')', visibleRoomSql(c)[1]],
     update: () => NONE,
     delete: () => NONE, // leaving and removing people go through server/rooms.js (leaveRoom, removeMember)
-    canInsert: () => 'Join a room with its 6-digit code',
+    canInsert: () => 'Join a room with its 10-digit code',
     defaults: ['user_id'],
   },
 

@@ -170,7 +170,9 @@ export default function MessagesPage({ targetUserId, onTargetHandled }: { target
 
   useEffect(() => {
     if (skipAutoScroll.current) { skipAutoScroll.current = false; return; }
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll only the message list (scrollIntoView would also scroll the whole page)
+    const list = listRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
   // ---------- live updates (the server only sends a conversation's messages to its two people) ----------
@@ -297,7 +299,7 @@ export default function MessagesPage({ targetUserId, onTargetHandled }: { target
   const shown = convs.filter((c) => !needle || c.peer.full_name.toLowerCase().includes(needle));
 
   return (
-    <div className="h-[calc(100dvh-3.5rem)] lg:h-[100dvh] flex overflow-hidden">
+    <div className="h-full min-h-0 flex overflow-hidden">
       {/* Conversations */}
       <div className={`w-72 shrink-0 min-h-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col ${mobileThread ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-4 border-b border-slate-200 dark:border-slate-800">
@@ -403,7 +405,7 @@ export default function MessagesPage({ targetUserId, onTargetHandled }: { target
         ) : (
           <>
             {/* Header */}
-            <div className="sticky top-0 z-10 h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 gap-3 shrink-0">
+            <div className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 gap-3 shrink-0">
               <button onClick={() => setMobileThread(false)} className="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" aria-label="Back to conversations">
                 <ArrowLeft className="w-5 h-5" />
               </button>
@@ -433,7 +435,7 @@ export default function MessagesPage({ targetUserId, onTargetHandled }: { target
             </div>
 
             {/* Messages */}
-            <div ref={listRef} className="flex-1 overflow-y-auto scrollbar-thin px-4 py-4 space-y-3">
+            <div ref={listRef} className="chat-message-list min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-4 space-y-3">
               {hasOlder && (
                 <div className="flex justify-center">
                   <button
@@ -504,7 +506,7 @@ export default function MessagesPage({ targetUserId, onTargetHandled }: { target
                 <button onClick={toggleBlock} className="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-medium transition-colors">Unblock</button>
               </div>
             ) : (
-              <form onSubmit={send} className="sticky bottom-0 z-10 p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
+              <form onSubmit={send} className="chat-composer flex-none p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shrink-0">
                 {staged.length > 0 && <StagedFiles items={staged} disabled={sending} onRemove={removeStaged} />}
                 {sendError && (
                   <div className="mb-2 flex items-start gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl px-3 py-2">

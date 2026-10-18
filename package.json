@@ -15,7 +15,9 @@
     "check": "node scripts/check.mjs",
     "backup": "node scripts/backup.mjs",
     "smoke-test": "node scripts/smoke-test.mjs",
-    "test:college-email": "node scripts/college-email-test.mjs"
+    "test:college-email": "node scripts/college-email-test.mjs",
+    "test:portal-navigation": "node scripts/portal-navigation-test.mjs",
+    "test:secure-codes": "node scripts/secure-codes-test.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.446.0",

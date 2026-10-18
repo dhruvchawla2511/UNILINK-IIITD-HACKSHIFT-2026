@@ -44,7 +44,7 @@ export const TOPICS: Topic[] = [
   {
     keywords: ['code', 'join', 'join a room', 'join room', 'join with code', 'room code', 'private room', 'key'],
     answer:
-      "Every room has a 6-digit code shown in the chat header. To join one, click the key button above the room list, type the code and you're in. Private rooms only appear for you after you join with the code.",
+      "Every room has a 10-digit code shown in the chat header. To join one, click the key button above the room list, type the code and you're in. Private rooms only appear for you after you join with the code.",
   },
   {
     keywords: ['create room', 'new room', 'make room', 'create a room', 'start room'],

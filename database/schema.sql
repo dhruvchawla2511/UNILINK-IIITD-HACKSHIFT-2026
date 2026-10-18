@@ -12,8 +12,21 @@ CREATE TABLE IF NOT EXISTS users (
   email         TEXT NOT NULL UNIQUE COLLATE NOCASE,
   password_hash TEXT NOT NULL,
   full_name     TEXT NOT NULL DEFAULT '',
+  -- NULL until the owner of the address proves it (emailed link, or Google reporting the email as verified).
+  -- College email auto-verification only ever runs for confirmed addresses (server/collegeEmail.js).
+  email_confirmed_at TEXT,
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+CREATE TABLE IF NOT EXISTS email_confirmations (
+  token_hash TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email      TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used_at    TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_confirmations_user ON email_confirmations(user_id);
 
 CREATE TABLE IF NOT EXISTS sessions (
   token_hash TEXT PRIMARY KEY,
@@ -40,11 +53,21 @@ CREATE TABLE IF NOT EXISTS colleges (
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 
+CREATE TABLE IF NOT EXISTS college_email_domains (
+  college_id TEXT NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'admin-confirmed',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  PRIMARY KEY (college_id, domain)
+);
+CREATE INDEX IF NOT EXISTS idx_college_email_domains_domain ON college_email_domains(domain);
+
 CREATE TABLE IF NOT EXISTS profiles (
   id          TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   email       TEXT NOT NULL,
   full_name   TEXT NOT NULL,
   role        TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'admin', 'super_admin')),
+  portal_type TEXT NOT NULL DEFAULT 'student' CHECK (portal_type IN ('student', 'teacher', 'recruiter', 'founder')),
   college_id  TEXT REFERENCES colleges(id) ON DELETE SET NULL,
   is_verified BOOLEAN NOT NULL DEFAULT 0,
   avatar_url  TEXT,
@@ -68,8 +91,9 @@ CREATE TABLE IF NOT EXISTS chat_rooms (
   name        TEXT NOT NULL,
   description TEXT,
   room_type   TEXT NOT NULL CHECK (room_type IN ('global', 'college', 'private')),
-  -- 6-digit code people share to join the room (set by the server, see server/rooms.js; unique index is created in server/db.js)
+  -- 10-digit code people share to join the room (set by the server, see server/rooms.js; unique index is created in server/db.js)
   room_code   TEXT,
+  event_id    TEXT REFERENCES events(id) ON DELETE CASCADE,
   college_id  TEXT REFERENCES colleges(id) ON DELETE CASCADE,
   created_by  TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
